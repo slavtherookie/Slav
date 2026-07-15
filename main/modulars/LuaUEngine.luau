@@ -153,6 +153,19 @@ function Utils.needsEnd(line)
     return false
 end
 
+Utils.DummyLabel = Instance.new("TextLabel")
+function Utils.getTextSize(text, size, font, limit)
+    if typeof(font) == "Font" then
+        Utils.DummyLabel.Text = text
+        Utils.DummyLabel.TextSize = size
+        Utils.DummyLabel.FontFace = font
+        Utils.DummyLabel.Size = UDim2.new(0, limit.X, 0, limit.Y)
+        return Utils.DummyLabel.TextBounds
+    else
+        return TextService:GetTextSize(text, size, font, limit)
+    end
+end
+
 -- converts a keycode into a real string character based on if shift is down
 function Utils.getCharacter(keyCode, isShiftDown)
     if keyCode.Value >= Enum.KeyCode.A.Value and keyCode.Value <= Enum.KeyCode.Z.Value then
@@ -222,7 +235,7 @@ function Utils.findWrapPoint(text, startIdx, endIdx, textSize, font, limit, defa
     local bestPoint = startIdx
     while lowBound <= highBound do
         local midPoint = math.floor((lowBound + highBound) / 2)
-        local segmentSize = TextService:GetTextSize(text:sub(startIdx, midPoint), textSize, font, limit)
+        local segmentSize = Utils.getTextSize(text:sub(startIdx, midPoint), textSize, font, limit)
         if segmentSize.Y <= defaultHeight then
             bestPoint = midPoint
             lowBound = midPoint + 1
@@ -2097,7 +2110,7 @@ function Baseline:ProcessKey(keyCode, isShiftDown, isCtrlDown)
             local prevLine = lineMap[currentLineIndex - 1]
             local rEndPrev = prevLine.renderEndIdx or prevLine.endIdx
             local subString = (prevLine.startIdx <= self.CursorIndex) and displayedText:sub(prevLine.startIdx, math.min(self.CursorIndex, rEndPrev)) or ""
-            local currentX = TextService:GetTextSize(subString, textSize, font, Vector2.new(10000, 10000)).X
+            local currentX = Utils.getTextSize(subString, textSize, font, Vector2.new(10000, 10000)).X
             self.CursorIndex = self:GetClosestIndexInLine(prevLine, currentX, displayedText, textSize, font)
         else
             self.CursorIndex = 0
@@ -2120,7 +2133,7 @@ function Baseline:ProcessKey(keyCode, isShiftDown, isCtrlDown)
             local currentLineObj = lineMap[currentLineIndex]
             local rEndCur = currentLineObj.renderEndIdx or currentLineObj.endIdx
             local subString = (currentLineObj.startIdx <= self.CursorIndex) and displayedText:sub(currentLineObj.startIdx, math.min(self.CursorIndex, rEndCur)) or ""
-            local currentX = TextService:GetTextSize(subString, textSize, font, Vector2.new(10000, 10000)).X
+            local currentX = Utils.getTextSize(subString, textSize, font, Vector2.new(10000, 10000)).X
             self.CursorIndex = self:GetClosestIndexInLine(nextLine, currentX, displayedText, textSize, font)
         else
             self.CursorIndex = #displayedText
@@ -2285,7 +2298,7 @@ function Baseline:GetLimit()
         for _ in string.gmatch(textForLines, "\n") do
             lineCountEstimate = lineCountEstimate + 1
         end
-        local charWidth = TextService:GetTextSize("A", textSize, font, Vector2.new(10000, 10000)).X
+        local charWidth = Utils.getTextSize("A", textSize, font, Vector2.new(10000, 10000)).X
         local numberWidth = #(tostring(lineCountEstimate)) * charWidth
         numberMarginWidth = math.max(35, numberWidth + 28)
     end
@@ -2340,7 +2353,7 @@ function Baseline:GetLineMap(text, textSize, font, limitVector)
     self.CurrentFoldPairs = foldPairs
 
     local lineSegments = {}
-    local defaultTextHeight = TextService:GetTextSize("A", textSize, font, Vector2.new(10000, 10000)).Y + 4
+    local defaultTextHeight = Utils.getTextSize("A", textSize, font, Vector2.new(10000, 10000)).Y + 4
     if text == "" then
         self.CachedDocumentWidth = 8
         return {{startIdx = 1, endIdx = 0, y = 0, height = defaultTextHeight, lineNumber = 1}}
@@ -2391,7 +2404,7 @@ function Baseline:GetLineMap(text, textSize, font, limitVector)
                     currentYPosition = currentYPosition + defaultTextHeight
                 else
                     while currentLineStartIndex <= pLine.endIdx do
-                        local segmentSize = TextService:GetTextSize(text:sub(currentLineStartIndex, pLine.endIdx), textSize, font, limitVector)
+                        local segmentSize = Utils.getTextSize(text:sub(currentLineStartIndex, pLine.endIdx), textSize, font, limitVector)
                         if segmentSize.Y <= defaultTextHeight then
                             table.insert(lineSegments, {
                                 startIdx = currentLineStartIndex, 
@@ -2427,7 +2440,7 @@ function Baseline:GetLineMap(text, textSize, font, limitVector)
 
     if not isWrapped then
         local maxWidth = 8
-        local charWidth = TextService:GetTextSize("A", textSize, font, Vector2.new(10000, 10000)).X
+        local charWidth = Utils.getTextSize("A", textSize, font, Vector2.new(10000, 10000)).X
         for _, seg in ipairs(lineSegments) do
             local rEnd = seg.renderEndIdx or seg.endIdx
             local str = (seg.startIdx <= rEnd) and text:sub(seg.startIdx, rEnd) or ""
@@ -2455,7 +2468,7 @@ function Baseline:GetClosestIndexInLine(lineData, targetX, text, textSize, font)
     local bestIndexFound = lineData.startIdx - 1
     local minDistanceX = math.huge
     local rEnd = lineData.renderEndIdx or lineData.endIdx
-    local charWidth = TextService:GetTextSize("A", textSize, font, Vector2.new(10000, 10000)).X
+    local charWidth = Utils.getTextSize("A", textSize, font, Vector2.new(10000, 10000)).X
     for index = lineData.startIdx - 1, rEnd do
         local subString = (lineData.startIdx <= index) and text:sub(lineData.startIdx, index) or ""
         local textXSize = #subString * charWidth
@@ -2516,7 +2529,7 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
     if hasLineNumbers then
         local lineCountEstimate = 1
         for _ in string.gmatch(displayedText, "\n") do lineCountEstimate = lineCountEstimate + 1 end
-        local charWidth = TextService:GetTextSize("A", editorTextSize, editorFont, Vector2.new(10000, 10000)).X
+        local charWidth = Utils.getTextSize("A", editorTextSize, editorFont, Vector2.new(10000, 10000)).X
         local numberWidth = #(tostring(lineCountEstimate)) * charWidth
         lineNumbersMarginWidth = math.max(35, numberWidth + 28)
     end
@@ -2561,7 +2574,7 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
                 activeLineNumber = lastSeenLineNumber
                 local rEnd = lineData.renderEndIdx or lineData.endIdx
                 local cursorSubstring = (lineData.startIdx <= self.CursorIndex) and displayedText:sub(lineData.startIdx, math.min(self.CursorIndex, rEnd)) or ""
-                currentCursorX = TextService:GetTextSize(cursorSubstring, editorTextSize, editorFont, Vector2.new(10000, 10000)).X
+                currentCursorX = Utils.getTextSize(cursorSubstring, editorTextSize, editorFont, Vector2.new(10000, 10000)).X
                 currentCursorY = lineData.y
                 currentCursorHeight = lineData.height
                 break
@@ -2787,23 +2800,23 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
 
                         if highlightStart <= highlightEnd then
                             local stringBeforeHighlight = displayedText:sub(lineData.startIdx, highlightStart - 1)
-                            highlightOffsetX = TextService:GetTextSize(stringBeforeHighlight, editorTextSize, editorFont, Vector2.new(10000, 10000)).X
+                            highlightOffsetX = Utils.getTextSize(stringBeforeHighlight, editorTextSize, editorFont, Vector2.new(10000, 10000)).X
                             local stringUpToTarget = displayedText:sub(lineData.startIdx, highlightEnd)
-                            highlightWidth = TextService:GetTextSize(stringUpToTarget, editorTextSize, editorFont, Vector2.new(10000, 10000)).X - highlightOffsetX
+                            highlightWidth = Utils.getTextSize(stringUpToTarget, editorTextSize, editorFont, Vector2.new(10000, 10000)).X - highlightOffsetX
                         else
                             local stringBeforeHighlight = (lineData.startIdx <= rEndLocal) and displayedText:sub(lineData.startIdx, rEndLocal) or ""
-                            highlightOffsetX = TextService:GetTextSize(stringBeforeHighlight, editorTextSize, editorFont, Vector2.new(10000, 10000)).X
+                            highlightOffsetX = Utils.getTextSize(stringBeforeHighlight, editorTextSize, editorFont, Vector2.new(10000, 10000)).X
                         end
 
                         if endIndex >= lineData.endIdx and lineData.endIdx ~= #displayedText then
                             if highlightStart > lineData.endIdx then
                                 highlightWidth = 5
                             else
-                                local dotsWidth = lineData.isFolded and TextService:GetTextSize(" ...", editorTextSize, editorFont, Vector2.new(10000, 10000)).X or 5
+                                local dotsWidth = lineData.isFolded and Utils.getTextSize(" ...", editorTextSize, editorFont, Vector2.new(10000, 10000)).X or 5
                                 highlightWidth = highlightWidth + dotsWidth
                             end
                         elseif lineData.isFolded and endIndex >= rEndLocal then
-                            local dotsWidth = TextService:GetTextSize(" ...", editorTextSize, editorFont, Vector2.new(10000, 10000)).X
+                            local dotsWidth = Utils.getTextSize(" ...", editorTextSize, editorFont, Vector2.new(10000, 10000)).X
                             highlightWidth = highlightWidth + dotsWidth
                         end
 
