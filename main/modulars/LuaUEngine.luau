@@ -562,6 +562,10 @@ function Baseline.new(canvasGroup)
         for k, v in pairs(canvasGroup:GetAttributes()) do
             newFrame:SetAttribute(k, v)
         end
+        -- reparent any existing children (UICorner, etc.) before destroying the CanvasGroup
+        for _, child in ipairs(canvasGroup:GetChildren()) do
+            child.Parent = newFrame
+        end
         canvasGroup:Destroy()
         canvasGroup = newFrame
     end
