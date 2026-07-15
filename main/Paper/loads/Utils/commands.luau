@@ -33,6 +33,24 @@ RegisterCommand("rejoin", {"rj"}, "", "none", "Rejoins the current server", func
 	TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
 end)
 
+RegisterCommand("jobid", {"job"}, "", "none", "Copies server JobId to clipboard", function(args)
+	if setclipboard then
+		setclipboard(tostring(game.JobId))
+		Notify("Server", "JobId copied to clipboard")
+	else
+		Notify("Error", "Your executor doesn't support setclipboard")
+	end
+end)
+
+RegisterCommand("joinlink", {"link"}, "", "none", "Copies server join link to clipboard", function(args)
+	if setclipboard then
+		setclipboard("roblox://experiences/start?placeId=" .. tostring(game.PlaceId) .. "&gameInstanceId=" .. tostring(game.JobId))
+		Notify("Server", "Join link copied to clipboard")
+	else
+		Notify("Error", "Your executor doesn't support setclipboard")
+	end
+end)
+
 RegisterCommand("fov", {"fieldofview"}, "[num]", "none", "Changes Camera FOV", function(args)
 	local num = tonumber(args[2])
 	if num then
@@ -53,8 +71,11 @@ RegisterCommand("locate", {"find", "esp"}, "[player] [tracer?]", "player", "Crea
 	if target == LocalPlayer then return Notify("Error", "Cannot locate yourself") end
 	
 	local wantsTracer = false
-	if args[3] and (args[3] == "true" or args[3] == "yes" or args[3] == "tracer" or args[3] == "t") then
-		wantsTracer = true
+	if args[3] then
+		local t = string.lower(tostring(args[3]))
+		if t == "true" or t == "yes" or t == "tracer" or t == "t" then
+			wantsTracer = true
+		end
 	end
 	
 	if activeESPs[target] then
@@ -112,18 +133,22 @@ RegisterCommand("locate", {"find", "esp"}, "[player] [tracer?]", "player", "Crea
 		
 		if wantsTracer then
 			local cam = Workspace.CurrentCamera
-			local pos, onScreen = cam:WorldToViewportPoint(targetHRP.Position)
-			if onScreen then
-				tracerLine.Visible = true
-				local from = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y)
-				local to = Vector2.new(pos.X, pos.Y)
-				local dist = (to - from).Magnitude
-				tracerLine.Size = UDim2.new(0, 1, 0, dist)
-				tracerLine.Position = UDim2.new(0, (from.X + to.X) / 2, 0, (from.Y + to.Y) / 2)
-				tracerLine.Rotation = math.deg(math.atan2(to.Y - from.Y, to.X - from.X)) - 90
-			else
-				tracerLine.Visible = false
+			if cam then
+				local pos, onScreen = cam:WorldToViewportPoint(targetHRP.Position)
+				if onScreen then
+					tracerLine.Visible = true
+					local from = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y)
+					local to = Vector2.new(pos.X, pos.Y)
+					local dist = (to - from).Magnitude
+					tracerLine.Size = UDim2.new(0, dist, 0, 1)
+					tracerLine.Position = UDim2.new(0, (from.X + to.X) / 2, 0, (from.Y + to.Y) / 2)
+					tracerLine.Rotation = math.deg(math.atan2(to.Y - from.Y, to.X - from.X))
+				else
+					tracerLine.Visible = false
+				end
 			end
+		else
+			tracerLine.Visible = false
 		end
 	end)
 	activeESPs[target] = espData
