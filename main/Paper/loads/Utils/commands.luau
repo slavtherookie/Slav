@@ -446,3 +446,14 @@ RegisterCommand("enablenotifs", {}, "", "none", "Shows notifications", function(
 	SetNotifsEnabled(true)
 	Notify("Settings", "Notifications Enabled")
 end)
+
+RegisterCommand("notepad", {"notes", "editor"}, "", "none", "Opens the Paper Notepad script editor", function(args)
+	Notify("Notepad", "Loading Notepad...")
+	local success, err = pcall(function()
+		loadstring(game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/Notepad.luau"))()
+	end)
+	
+	if not success then
+		Notify("Error", "Failed to load Notepad: " .. tostring(err))
+	end
+end)
