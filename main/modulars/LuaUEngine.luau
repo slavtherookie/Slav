@@ -264,7 +264,7 @@ ScrollBar.__index = ScrollBar
 -- helper to make the little up/down arrow buttons on the scrollbar
 local function makeArrowButton(parent, rotation, isVertical, bgColor, imgColor, bgTrans, strokeColor, strokeTrans)
     local SCROLLBAR_SIZE = 18
-    local ARROW_IMAGE = "rbxassetid://10879281987"
+    local ARROW_IMAGE = "rbxassetid://5279719038"
     local ARROW_COLOR = imgColor or Color3.fromRGB(160, 160, 160)
     
     local btn = Instance.new("ImageButton")
