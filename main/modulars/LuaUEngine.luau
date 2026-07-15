@@ -263,7 +263,15 @@ function Utils.getBlockDelta(lineStr)
     opens = opens + Utils.countWord(cleanLine, "function")
     opens = opens + Utils.countWord(cleanLine, "repeat")
     if cleanLine:match("^%s*do%f[%W]") then opens = opens + 1 end
+    
+    local _, openBraces = cleanLine:gsub("{", "")
+    opens = opens + openBraces
+
     local closes = Utils.countWord(cleanLine, "end") + Utils.countWord(cleanLine, "until")
+    
+    local _, closeBraces = cleanLine:gsub("}", "")
+    closes = closes + closeBraces
+
     return opens - closes
 end
 
@@ -2378,11 +2386,11 @@ function Baseline:GetLineMap(text, textSize, font, limitVector)
                 endIdx = endPLine.startIdx - 1,
                 renderEndIdx = pLine.endIdx,
                 y = currentYPosition,
-                height = defaultTextHeight * 2,
+                height = defaultTextHeight,
                 lineNumber = i,
                 isFolded = true
             })
-            currentYPosition = currentYPosition + (defaultTextHeight * 2)
+            currentYPosition = currentYPosition + defaultTextHeight
             i = foldPairs[i]
         else
             if not isWrapped then
@@ -2712,8 +2720,7 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
                 
                 local richTextStr = self:ApplySyntaxCached(lineData, stringOnLine, syntaxStateStr)
                 if lineData.isFolded then
-                    local indentStr = stringOnLine:match("^%s*") or ""
-                    richTextStr = richTextStr .. '\n' .. indentStr .. '    <font color="#888888">...</font>'
+                    richTextStr = richTextStr .. ' <font color="#888888">...</font>'
                 end
                 textLabelObj.Text = richTextStr
                 textLabelObj.Position = UDim2.new(0, 4, 0, 4 + lineData.y)
