@@ -579,13 +579,19 @@ function Baseline.new(canvasGroup)
     self.CurrentLineHighlight.ZIndex = 1
     self.CurrentLineHighlight.Visible = false
     self.CurrentLineHighlight.Parent = canvasGroup
+    
+    local highlightStroke = Instance.new("UIStroke")
+    highlightStroke.Color = Color3.fromRGB(255, 255, 255)
+    highlightStroke.Transparency = 0.85
+    highlightStroke.Thickness = 1
+    highlightStroke.Parent = self.CurrentLineHighlight
 
     -- frame for the numbers on the left
     self.LineNumbersContainer = Instance.new("Frame")
     self.LineNumbersContainer.Name = "BaselineLineNumbersContainer"
     self.LineNumbersContainer.BackgroundTransparency = 1
     self.LineNumbersContainer.ClipsDescendants = true
-    self.LineNumbersContainer.ZIndex = 2
+    self.LineNumbersContainer.ZIndex = 11
     self.LineNumbersContainer.Parent = canvasGroup
 
     self.LineNumbersInner = Instance.new("Frame")
@@ -999,6 +1005,7 @@ function Baseline:ApplyThemeRules(rules)
             if self.HScrollBar then self.HScrollBar:SetColors(scrollBg, scrollHandle) end
         end
     end
+    self.CachedText = nil
     self:UpdateBlinker(true)
 end
 
@@ -1504,12 +1511,20 @@ function Baseline:CloseFindUI()
 end
 
 -- imports a local modulescript to apply custom themes 
-function Baseline:Import(moduleName)
-    local syntaxModule = self.CanvasGroup:FindFirstChild(moduleName)
-    if syntaxModule and syntaxModule:IsA("ModuleScript") then
-        local rules = require(syntaxModule)
+function Baseline:Import(module)
+    if typeof(module) == "string" then
+        local syntaxModule = self.CanvasGroup:FindFirstChild(module)
+        if syntaxModule and syntaxModule:IsA("ModuleScript") then
+            local rules = require(syntaxModule)
+            if type(rules) == "function" then rules = rules() end
+            self:ApplyThemeRules(rules)
+        end
+    elseif typeof(module) == "Instance" and module:IsA("ModuleScript") then
+        local rules = require(module)
         if type(rules) == "function" then rules = rules() end
         self:ApplyThemeRules(rules)
+    elseif type(module) == "table" then
+        self:ApplyThemeRules(module)
     end
 end
 
@@ -1518,11 +1533,17 @@ function Baseline:ImportTheme(url)
     task.spawn(function()
         pcall(function()
             local source = ""
-            if getgenv and getgenv().game and getgenv().game.HttpGet then
-                source = getgenv().game:HttpGet(url)
-            else
-                source = HttpService:GetAsync(url)
+            local loadFunc = loadstring or (getfenv and getfenv().loadstring)
+            local function fetchUrl()
+                if getgenv and getgenv().game and getgenv().game.HttpGet then
+                    return getgenv().game:HttpGet(url)
+                elseif game and game.HttpGet then
+                    return game:HttpGet(url)
+                else
+                    return HttpService:GetAsync(url)
+                end
             end
+            source = fetchUrl()
             local loadFunc = loadstring or (getfenv and getfenv().loadstring)
             if loadFunc then
                 local fn = loadFunc(source)
@@ -2657,7 +2678,7 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
                             foldBtn.BackgroundTransparency = 1
                             foldBtn.Image = "rbxassetid://5642383285"
                             foldBtn.Size = UDim2.new(0, 16, 0, 16)
-                            foldBtn.ZIndex = 4
+                            foldBtn.ZIndex = 12
                             foldBtn.Parent = self.LineNumbersInner
                             
                             foldBtn.MouseEnter:Connect(function() 
