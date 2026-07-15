@@ -13,12 +13,169 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
+local StarterGui = game:GetService("StarterGui")
+local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
 local activeESPs = {}
 local flyConn = nil
 local flyPart = nil
 local flyGyro = nil
+
+-- Freecam Variables
+local fcEnabled = false
+local fcBaseSpeed = 50
+local fcSpeed = fcBaseSpeed
+local fcSpeedStep = 15
+local fcMinSpeed = 5
+local fcMaxSpeed = 500
+
+local fcVelocity = Vector3.new()
+local fcTargetVelocity = Vector3.new()
+local fcMoveAcceleration = 10
+
+local fcYaw = 0
+local fcPitch = 0
+local fcCurrentYaw = 0
+local fcCurrentPitch = 0
+local fcLookSensitivity = 0.002
+local fcRotSmoothness = 15
+
+local fovTweenInfo = TweenInfo.new(0.6, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
+local hiddenGuis = {}
+
+local function setCharacterState(frozen)
+	local char = LocalPlayer.Character
+	if not char then return end
+	
+	local root = char:FindFirstChild("HumanoidRootPart")
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	
+	if root then
+		root.Anchored = frozen
+	end
+	if hum then
+		hum.AutoRotate = not frozen
+	end
+end
+
+local function setGuisEnabled(state)
+	pcall(function()
+		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, state)
+	end)
+	
+	local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	if playerGui then
+		if not state then
+			table.clear(hiddenGuis)
+			for _, gui in ipairs(playerGui:GetChildren()) do
+				if gui:IsA("ScreenGui") and gui.Enabled and gui.Name ~= "PaperAdmin" and gui.Name ~= "Paper_ESP_GUI" then
+					hiddenGuis[gui] = true
+					gui.Enabled = false
+				end
+			end
+		else
+			for gui in pairs(hiddenGuis) do
+				if gui.Parent then
+					gui.Enabled = true
+				end
+			end
+			table.clear(hiddenGuis)
+		end
+	end
+end
+
+local function toggleFreecam()
+	fcEnabled = not fcEnabled
+	local cam = Workspace.CurrentCamera
+
+	if fcEnabled then
+		setCharacterState(true)
+		setGuisEnabled(false)
+
+		local rx, ry, rz = cam.CFrame:ToEulerAnglesYXZ()
+		fcPitch = rx
+		fcYaw = ry
+		fcCurrentPitch = fcPitch
+		fcCurrentYaw = fcYaw
+		fcVelocity = Vector3.new()
+		fcSpeed = fcBaseSpeed
+
+		cam.CameraType = Enum.CameraType.Scriptable
+		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+
+		TweenService:Create(cam, fovTweenInfo, {FieldOfView = 90}):Play()
+	else
+		setCharacterState(false)
+		setGuisEnabled(true)
+
+		cam.CameraType = Enum.CameraType.Custom
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+
+		TweenService:Create(cam, fovTweenInfo, {FieldOfView = 70}):Play()
+	end
+end
+
+UserInputService.InputBegan:Connect(function(input, processed)
+	local shiftHeld = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift)
+	
+	if input.KeyCode == Enum.KeyCode.P and shiftHeld and not processed then
+		toggleFreecam()
+		if fcEnabled then Notify("Freecam", "Freecam Enabled") else Notify("Freecam", "Freecam Disabled") end
+	end
+
+	if fcEnabled and shiftHeld and input.UserInputType == Enum.UserInputType.MouseButton3 then
+		fcSpeed = fcBaseSpeed
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input, processed)
+	if not fcEnabled then return end
+
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = input.Delta
+		fcYaw = fcYaw - delta.X * fcLookSensitivity
+		fcPitch = math.clamp(fcPitch - delta.Y * fcLookSensitivity, -math.pi / 2 + 0.01, math.pi / 2 - 0.01)
+	elseif input.UserInputType == Enum.UserInputType.MouseWheel then
+		local shiftHeld = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift)
+		if shiftHeld then
+			fcSpeed = math.clamp(fcSpeed + (input.Position.Z * fcSpeedStep), fcMinSpeed, fcMaxSpeed)
+		end
+	end
+end)
+
+RunService.RenderStepped:Connect(function(dt)
+	if not fcEnabled then return end
+	local cam = Workspace.CurrentCamera
+	if not cam then return end
+
+	local rotAlpha = 1 - math.exp(-dt * fcRotSmoothness)
+	fcCurrentYaw = fcCurrentYaw + (fcYaw - fcCurrentYaw) * rotAlpha
+	fcCurrentPitch = fcCurrentPitch + (fcPitch - fcCurrentPitch) * rotAlpha
+
+	local rotationCFrame = CFrame.Angles(0, fcCurrentYaw, 0) * CFrame.Angles(fcCurrentPitch, 0, 0)
+
+	local moveDir = Vector3.new()
+	if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Vector3.new(0, 0, -1) end
+	if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir + Vector3.new(0, 0, 1) end
+	if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir + Vector3.new(-1, 0, 0) end
+	if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Vector3.new(1, 0, 0) end
+	if UserInputService:IsKeyDown(Enum.KeyCode.E) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+	if UserInputService:IsKeyDown(Enum.KeyCode.Q) then moveDir = moveDir + Vector3.new(0, -1, 0) end
+
+	if moveDir.Magnitude > 0 then
+		moveDir = moveDir.Unit
+	end
+
+	fcTargetVelocity = rotationCFrame:VectorToWorldSpace(moveDir) * fcSpeed
+	
+	local moveAlpha = 1 - math.exp(-dt * fcMoveAcceleration)
+	fcVelocity = fcVelocity:Lerp(fcTargetVelocity, moveAlpha)
+
+	cam.CFrame = CFrame.new(cam.CFrame.Position + fcVelocity * dt) * rotationCFrame
+end)
+
+-- Command Registry 
 
 RegisterCommand("expand", {"open", "ui"}, "", "none", "Expands the UI to show all commands", function(args)
 	SetUIExpanded(true)
@@ -269,6 +426,15 @@ RegisterCommand("clip", {"c"}, "", "none", "Disables noclip", function(args)
 		_G.PaperNoclip:Disconnect() 
 		_G.PaperNoclip = nil
 		Notify("Movement", "Noclip Disabled")
+	end
+end)
+
+RegisterCommand("freecam", {"fc"}, "", "none", "Toggles freecam mode", function(args)
+	toggleFreecam()
+	if fcEnabled then 
+		Notify("Freecam", "Freecam Enabled. You can also use Shift+P to toggle.")
+	else
+		Notify("Freecam", "Freecam Disabled.")
 	end
 end)
 
