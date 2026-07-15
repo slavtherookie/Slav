@@ -2245,7 +2245,7 @@ function Baseline:GetLimit()
             lineCountEstimate = lineCountEstimate + 1
         end
         local numberWidth = TextService:GetTextSize(tostring(lineCountEstimate), textSize, font, Vector2.new(10000, 10000)).X
-        numberMarginWidth = math.max(30, numberWidth + 24)
+        numberMarginWidth = math.max(35, numberWidth + 28)
     end
     local maximumWidth = (self.CanvasGroup.AbsoluteSize.X - 8) - numberMarginWidth
     return isWrapped and Vector2.new(math.max(10, maximumWidth), 10000) or Vector2.new(10000, 10000)
@@ -2316,15 +2316,15 @@ function Baseline:GetLineMap(text, textSize, font, limitVector)
             local endPLine = pLines[foldPairs[i]]
             table.insert(lineSegments, {
                 startIdx = pLine.startIdx,
-                endIdx = endPLine.endIdx,
+                endIdx = endPLine.startIdx - 1,
                 renderEndIdx = pLine.endIdx,
                 y = currentYPosition,
-                height = defaultTextHeight,
+                height = defaultTextHeight * 2,
                 lineNumber = i,
                 isFolded = true
             })
-            currentYPosition = currentYPosition + defaultTextHeight
-            i = foldPairs[i] + 1
+            currentYPosition = currentYPosition + (defaultTextHeight * 2)
+            i = foldPairs[i]
         else
             if not isWrapped then
                 table.insert(lineSegments, {
@@ -2388,7 +2388,10 @@ function Baseline:GetLineMap(text, textSize, font, limitVector)
         for _, seg in ipairs(lineSegments) do
             local rEnd = seg.renderEndIdx or seg.endIdx
             local str = (seg.startIdx <= rEnd) and text:sub(seg.startIdx, rEnd) or ""
-            if seg.isFolded then str = str .. " ⋯" end
+            if seg.isFolded then 
+                local indentStr = str:match("^%s*") or ""
+                str = str .. "\n" .. indentStr .. "    ..." 
+            end
             local w = TextService:GetTextSize(str, textSize, font, Vector2.new(10000, 10000)).X
             if w > maxWidth then maxWidth = w end
         end
@@ -2466,7 +2469,7 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
         local lineCountEstimate = 1
         for _ in string.gmatch(displayedText, "\n") do lineCountEstimate = lineCountEstimate + 1 end
         local numberWidth = TextService:GetTextSize(tostring(lineCountEstimate), editorTextSize, editorFont, Vector2.new(10000, 10000)).X
-        lineNumbersMarginWidth = math.max(30, numberWidth + 24)
+        lineNumbersMarginWidth = math.max(35, numberWidth + 28)
     end
 
     local scrollbarWidth = (self.VScrollBar and self.VScrollBar.BarFrame.Visible) and 18 or 0
@@ -2638,7 +2641,8 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
                 
                 local richTextStr = self:ApplySyntaxCached(lineData, stringOnLine, syntaxStateStr)
                 if lineData.isFolded then
-                    richTextStr = richTextStr .. '<font color="#888888"> ...</font>'
+                    local indentStr = stringOnLine:match("^%s*") or ""
+                    richTextStr = richTextStr .. '\n' .. indentStr .. '    <font color="#888888">...</font>'
                 end
                 textLabelObj.Text = richTextStr
                 textLabelObj.Position = UDim2.new(0, 4, 0, 4 + lineData.y)
@@ -2667,7 +2671,7 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
                     numberLabelObj.TextTransparency = 0
                     numberLabelObj.Text = tostring(lineData.lineNumber)
                     numberLabelObj.Position = UDim2.new(0, 0, 0, 4 + lineData.y)
-                    numberLabelObj.Size = UDim2.new(1, -16, 0, lineData.height)
+                    numberLabelObj.Size = UDim2.new(1, -22, 0, editorDefaultHeight)
                     numberLabelObj.Visible = true
 
                     if self.CurrentFoldPairs and self.CurrentFoldPairs[lineData.lineNumber] then
@@ -2714,7 +2718,7 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
                             foldBtn.ImageColor3 = editorLineNumberColor
                         end
                         
-                        foldBtn.Position = UDim2.new(1, -22, 0, 4 + lineData.y + (lineData.height - 16) / 2)
+                        foldBtn.Position = UDim2.new(1, -18, 0, 4 + lineData.y + (editorDefaultHeight - 16) / 2)
                         foldBtn.Visible = true
                     end
                 end
@@ -2897,7 +2901,8 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
             
             local richTextStr = self:ApplySyntaxCached(lineData, stringOnLine, mSyntaxStateStr)
             if lineData.isFolded then
-                richTextStr = richTextStr .. '<font color="#888888"> ...</font>'
+                local indentStr = stringOnLine:match("^%s*") or ""
+                richTextStr = richTextStr .. '\n' .. indentStr .. '    <font color="#888888">...</font>'
             end
             mLabel.Text = richTextStr
             
