@@ -887,6 +887,7 @@ function Baseline.new(canvasGroup)
 
     -- this loop handles the repeating keys when u hold them down and blinks the cursor
     table.insert(self.Connections, RunService.RenderStepped:Connect(function(deltaTime)
+        if deltaTime > 0.1 then deltaTime = 0 end
         if self.HeldKey then
             self.KeyTimer = self.KeyTimer + deltaTime
             if self.KeyTimer > 0.4 then
@@ -2244,7 +2245,8 @@ function Baseline:GetLimit()
         for _ in string.gmatch(textForLines, "\n") do
             lineCountEstimate = lineCountEstimate + 1
         end
-        local numberWidth = TextService:GetTextSize(tostring(lineCountEstimate), textSize, font, Vector2.new(10000, 10000)).X
+        local charWidth = TextService:GetTextSize("A", textSize, font, Vector2.new(10000, 10000)).X
+        local numberWidth = #(tostring(lineCountEstimate)) * charWidth
         numberMarginWidth = math.max(35, numberWidth + 28)
     end
     local maximumWidth = (self.CanvasGroup.AbsoluteSize.X - 8) - numberMarginWidth
@@ -2385,6 +2387,7 @@ function Baseline:GetLineMap(text, textSize, font, limitVector)
 
     if not isWrapped then
         local maxWidth = 8
+        local charWidth = TextService:GetTextSize("A", textSize, font, Vector2.new(10000, 10000)).X
         for _, seg in ipairs(lineSegments) do
             local rEnd = seg.renderEndIdx or seg.endIdx
             local str = (seg.startIdx <= rEnd) and text:sub(seg.startIdx, rEnd) or ""
@@ -2392,7 +2395,11 @@ function Baseline:GetLineMap(text, textSize, font, limitVector)
                 local indentStr = str:match("^%s*") or ""
                 str = str .. "\n" .. indentStr .. "    ..." 
             end
-            local w = TextService:GetTextSize(str, textSize, font, Vector2.new(10000, 10000)).X
+            local maxLineLen = 0
+            for line in string.gmatch(str .. "\n", "(.-)\n") do
+                if #line > maxLineLen then maxLineLen = #line end
+            end
+            local w = maxLineLen * charWidth
             if w > maxWidth then maxWidth = w end
         end
         self.CachedDocumentWidth = maxWidth + 8
@@ -2408,9 +2415,10 @@ function Baseline:GetClosestIndexInLine(lineData, targetX, text, textSize, font)
     local bestIndexFound = lineData.startIdx - 1
     local minDistanceX = math.huge
     local rEnd = lineData.renderEndIdx or lineData.endIdx
+    local charWidth = TextService:GetTextSize("A", textSize, font, Vector2.new(10000, 10000)).X
     for index = lineData.startIdx - 1, rEnd do
         local subString = (lineData.startIdx <= index) and text:sub(lineData.startIdx, index) or ""
-        local textXSize = TextService:GetTextSize(subString, textSize, font, Vector2.new(10000, 10000)).X
+        local textXSize = #subString * charWidth
         local distanceX = math.abs(textXSize - targetX)
         if distanceX < minDistanceX then
             minDistanceX = distanceX
@@ -2468,7 +2476,8 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
     if hasLineNumbers then
         local lineCountEstimate = 1
         for _ in string.gmatch(displayedText, "\n") do lineCountEstimate = lineCountEstimate + 1 end
-        local numberWidth = TextService:GetTextSize(tostring(lineCountEstimate), editorTextSize, editorFont, Vector2.new(10000, 10000)).X
+        local charWidth = TextService:GetTextSize("A", editorTextSize, editorFont, Vector2.new(10000, 10000)).X
+        local numberWidth = #(tostring(lineCountEstimate)) * charWidth
         lineNumbersMarginWidth = math.max(35, numberWidth + 28)
     end
 
@@ -2609,7 +2618,12 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
 
     if #editorLineMap > 0 and firstVisibleIdx > 1 then
         local targetStart = editorLineMap[firstVisibleIdx].startIdx
-        syntaxStateStr = self:GetSyntaxStateAt(displayedText, targetStart, 1, "none")
+        local startParse = math.max(1, targetStart - 10000)
+        if startParse > 1 then
+            local nl = displayedText:find("\n", startParse)
+            if nl and nl < targetStart then startParse = nl + 1 end
+        end
+        syntaxStateStr = self:GetSyntaxStateAt(displayedText, targetStart, startParse, "none")
         processedTextUpTo = targetStart
     end
 
@@ -2871,7 +2885,12 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
 
         if #editorLineMap > 0 and mFirstIdx > 1 then
             local targetStart = editorLineMap[mFirstIdx].startIdx
-            mSyntaxStateStr = self:GetSyntaxStateAt(displayedText, targetStart, 1, "none")
+            local startParse = math.max(1, targetStart - 10000)
+            if startParse > 1 then
+                local nl = displayedText:find("\n", startParse)
+                if nl and nl < targetStart then startParse = nl + 1 end
+            end
+            mSyntaxStateStr = self:GetSyntaxStateAt(displayedText, targetStart, startParse, "none")
             mProcessedUpTo = targetStart
         end
 
