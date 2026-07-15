@@ -45,7 +45,25 @@ local GlobalSettings = {
     TabIndex = 0,                 -- used if u have multiple editors and want to press TAB to switch between them
     Lines = true,                 -- shows the 1, 2, 3 line numbers on the left
     LineNumberColor3 = Color3.fromRGB(130, 130, 130), -- color of the line numbers
-    AutoHeight = false            -- if true the box gets bigger automatically as u type more lines
+    AutoHeight = false,           -- if true the box gets bigger automatically as u type more lines
+    
+    -- Customization for Editor Background
+    BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+    BackgroundTransparency = 0,
+    StrokeColor3 = Color3.fromRGB(255, 255, 255),
+    StrokeTransparency = 0.85,
+    StrokeThickness = 1,
+    
+    -- Customization for Scrollbars
+    ScrollBarTrackColor3 = Color3.fromRGB(35, 35, 35),
+    ScrollBarTrackTransparency = 0,
+    ScrollBarThumbColor3 = Color3.fromRGB(60, 60, 60),
+    ScrollBarThumbTransparency = 0,
+    ScrollBarHoverColor3 = Color3.fromRGB(75, 75, 75),
+    ScrollBarPressColor3 = Color3.fromRGB(40, 40, 40),
+    ScrollBarImageColor3 = Color3.fromRGB(160, 160, 160),
+    ScrollBarStrokeColor3 = Color3.fromRGB(33, 33, 33),
+    ScrollBarStrokeTransparency = 0
 }
 
 ---------------------------------------------------------
@@ -244,25 +262,30 @@ local ScrollBar = {}
 ScrollBar.__index = ScrollBar
 
 -- helper to make the little up/down arrow buttons on the scrollbar
-local function makeArrowButton(parent, rotation, isVertical)
+local function makeArrowButton(parent, rotation, isVertical, bgColor, imgColor, bgTrans, strokeColor, strokeTrans)
     local SCROLLBAR_SIZE = 18
-    local ARROW_IMAGE = "rbxassetid://5279719038"
-    local ARROW_COLOR = Color3.fromRGB(160, 160, 160)
+    local ARROW_IMAGE = "rbxassetid://10879281987"
+    local ARROW_COLOR = imgColor or Color3.fromRGB(160, 160, 160)
     
     local btn = Instance.new("ImageButton")
     btn.Size = isVertical and UDim2.new(1, 0, 0, SCROLLBAR_SIZE) or UDim2.new(0, SCROLLBAR_SIZE, 1, 0)
-    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    btn.BorderColor3 = Color3.fromRGB(33, 33, 33)
-    btn.BorderSizePixel = 1
+    btn.BackgroundColor3 = bgColor or Color3.fromRGB(35, 35, 35)
+    btn.BorderColor3 = strokeColor or Color3.fromRGB(33, 33, 33)
+    btn.BorderSizePixel = 0
     btn.AutoButtonColor = false
     btn.Image = ""
     btn.ZIndex = 101
     btn.Parent = parent
-    btn.BackgroundTransparency = 0
+    btn.BackgroundTransparency = bgTrans or 0
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = strokeColor or Color3.fromRGB(33, 33, 33)
+    stroke.Transparency = strokeTrans or 0
+    stroke.Parent = btn
     
     local icon = Instance.new("ImageLabel")
     icon.AnchorPoint = Vector2.new(0.5, 0.5)
-    icon.Size = UDim2.new(0, 10, 0, 6)
+    icon.Size = UDim2.new(0, 12, 0, 12)
     icon.Position = UDim2.new(0.5, 0, 0.5, 0)
     icon.BackgroundTransparency = 1
     icon.Image = ARROW_IMAGE
@@ -271,7 +294,7 @@ local function makeArrowButton(parent, rotation, isVertical)
     icon.ZIndex = 102
     icon.Parent = btn
     
-    return btn
+    return btn, icon
 end
 
 -- creates a new scrollbar instance tbh
@@ -288,30 +311,41 @@ function ScrollBar.new(container, isVertical)
     self.OnScroll = nil
     
     -- colors for the scrollbar states
-    self.TrackColor = Color3.fromRGB(35, 35, 35)
-    self.ThumbColor = Color3.fromRGB(60, 60, 60)
-    self.HoverColor = Color3.fromRGB(75, 75, 75)
-    self.PressColor = Color3.fromRGB(40, 40, 40)
+    self.TrackColor = container:GetAttribute("ScrollBarTrackColor3") or Color3.fromRGB(35, 35, 35)
+    self.ThumbColor = container:GetAttribute("ScrollBarThumbColor3") or Color3.fromRGB(60, 60, 60)
+    self.HoverColor = container:GetAttribute("ScrollBarHoverColor3") or Color3.fromRGB(75, 75, 75)
+    self.PressColor = container:GetAttribute("ScrollBarPressColor3") or Color3.fromRGB(40, 40, 40)
+    self.TrackTransparency = container:GetAttribute("ScrollBarTrackTransparency") or 0
+    self.ThumbTransparency = container:GetAttribute("ScrollBarThumbTransparency") or 0
     self.IsDraggingThumb = false
+
+    local imageColor = container:GetAttribute("ScrollBarImageColor3") or Color3.fromRGB(160, 160, 160)
+    local strokeColor = container:GetAttribute("ScrollBarStrokeColor3") or Color3.fromRGB(33, 33, 33)
+    local strokeTrans = container:GetAttribute("ScrollBarStrokeTransparency") or 0
 
     -- the main background frame for the scrollbar
     self.BarFrame = Instance.new("Frame")
     self.BarFrame.Name = isVertical and "VScrollBar" or "HScrollBar"
     self.BarFrame.BackgroundColor3 = self.TrackColor
-    self.BarFrame.BorderColor3 = Color3.fromRGB(33, 33, 33)
-    self.BarFrame.BorderSizePixel = 1
+    self.BarFrame.BorderColor3 = strokeColor
+    self.BarFrame.BorderSizePixel = 0
     self.BarFrame.Size = isVertical and UDim2.new(0, SCROLLBAR_SIZE, 1, 0) or UDim2.new(1, -SCROLLBAR_SIZE, 0, SCROLLBAR_SIZE)
     self.BarFrame.Position = isVertical and UDim2.new(1, -SCROLLBAR_SIZE, 0, 0) or UDim2.new(0, 0, 1, -SCROLLBAR_SIZE)
     self.BarFrame.ZIndex = 100
     self.BarFrame.Parent = container
     self.BarFrame.Visible = false
-    self.BarFrame.BackgroundTransparency = 0
+    self.BarFrame.BackgroundTransparency = self.TrackTransparency
+    
+    local barStroke = Instance.new("UIStroke")
+    barStroke.Color = strokeColor
+    barStroke.Transparency = strokeTrans
+    barStroke.Parent = self.BarFrame
 
-    self.UpBtn = makeArrowButton(self.BarFrame, isVertical and 180 or -90, isVertical)
+    self.UpBtn, self.UpIcon = makeArrowButton(self.BarFrame, isVertical and 180 or 90, isVertical, self.TrackColor, imageColor, self.TrackTransparency, strokeColor, strokeTrans)
     self.UpBtn.AnchorPoint = Vector2.new(0, 0)
     self.UpBtn.Position = UDim2.new(0, 0, 0, 0)
     
-    self.DownBtn = makeArrowButton(self.BarFrame, isVertical and 0 or 90, isVertical)
+    self.DownBtn, self.DownIcon = makeArrowButton(self.BarFrame, isVertical and 0 or -90, isVertical, self.TrackColor, imageColor, self.TrackTransparency, strokeColor, strokeTrans)
     self.DownBtn.AnchorPoint = Vector2.new(isVertical and 0 or 1, isVertical and 1 or 0)
     self.DownBtn.Position = isVertical and UDim2.new(0, 0, 1, 0) or UDim2.new(1, 0, 0, 0)
 
@@ -329,7 +363,7 @@ function ScrollBar.new(container, isVertical)
     self.Track = Instance.new("Frame")
     self.Track.Name = "Track"
     self.Track.BackgroundColor3 = self.TrackColor
-    self.Track.BackgroundTransparency = 0
+    self.Track.BackgroundTransparency = self.TrackTransparency
     self.Track.BorderSizePixel = 0
     self.Track.Size = isVertical and UDim2.new(1, 0, 1, -SCROLLBAR_SIZE * 2) or UDim2.new(1, -SCROLLBAR_SIZE * 2, 1, 0)
     self.Track.Position = isVertical and UDim2.new(0, 0, 0, SCROLLBAR_SIZE) or UDim2.new(0, SCROLLBAR_SIZE, 0, 0)
@@ -346,7 +380,7 @@ function ScrollBar.new(container, isVertical)
     self.Thumb.ZIndex = 101
     self.Thumb.Visible = false
     self.Thumb.Parent = self.Track
-    self.Thumb.BackgroundTransparency = 0
+    self.Thumb.BackgroundTransparency = self.ThumbTransparency
 
     local thumbBtn = Instance.new("TextButton")
     thumbBtn.Size = UDim2.new(1, 0, 1, 0)
@@ -498,14 +532,20 @@ function Baseline.new(canvasGroup)
         newFrame.Size = canvasGroup.Size
         newFrame.Position = canvasGroup.Position
         newFrame.AnchorPoint = canvasGroup.AnchorPoint
-        newFrame.BackgroundColor3 = canvasGroup.BackgroundColor3
-        newFrame.BackgroundTransparency = canvasGroup.BackgroundTransparency
+        newFrame.BackgroundColor3 = canvasGroup:GetAttribute("BackgroundColor3") or canvasGroup.BackgroundColor3
+        newFrame.BackgroundTransparency = canvasGroup:GetAttribute("BackgroundTransparency") or canvasGroup.BackgroundTransparency
         newFrame.BorderColor3 = canvasGroup.BorderColor3
-        newFrame.BorderSizePixel = canvasGroup.BorderSizePixel
+        newFrame.BorderSizePixel = 0
         newFrame.ZIndex = canvasGroup.ZIndex
         newFrame.LayoutOrder = canvasGroup.LayoutOrder
         newFrame.ClipsDescendants = true
         newFrame.Parent = canvasGroup.Parent
+        
+        local editorStroke = Instance.new("UIStroke")
+        editorStroke.Color = canvasGroup:GetAttribute("StrokeColor3") or Color3.fromRGB(255, 255, 255)
+        editorStroke.Transparency = canvasGroup:GetAttribute("StrokeTransparency") or 0.85
+        editorStroke.Thickness = canvasGroup:GetAttribute("StrokeThickness") or 1
+        editorStroke.Parent = newFrame
         for k, v in pairs(canvasGroup:GetAttributes()) do
             newFrame:SetAttribute(k, v)
         end
