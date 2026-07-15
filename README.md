@@ -4,26 +4,58 @@
 
 Everything in this repository is licensed under the **Slav License**.
 
+## Permissions
+
 You are free to:
-- Edit, modify, and customize any code, assets, or files in this repository for this project.
-- Use the contents as a base for your own modifications within this project.
 
-You may **not**:
-- Remove or replace any existing credits.
-- Remove, reuse, redistribute, or claim ownership of any custom icons, branding, logos, profile images, or other original visual assets included in this repository.
-- Use this project's branding, custom icons, or credited assets in other projects without explicit permission.
+- Modify any source code.
+- Edit, improve, or rewrite any scripts.
+- Customize the project however you like for your own use.
+- Learn from and build upon the code.
 
-By using this repository, you agree to respect the original credits and branding.
+## Restrictions
+
+The following may **NOT** be removed, reused, or redistributed:
+
+- Credits to the original creator.
+- Custom icons.
+- Logos.
+- Branding.
+- Profile images.
+- Any original artwork created specifically for this project.
+
+These assets are exclusive to this repository and may **not** be used in any other project without permission from the creator.
+
+If you fork this repository, all credits must remain intact.
 
 ---
 
 # Creator
 
-<img src="https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/Profile.jpg" alt="SLAV" width="180">
+<table>
+<tr>
 
-## SLAV
+<td width="180" valign="top">
+<img src="https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/Profile.jpg" width="160" alt="SLAV">
+</td>
 
-- **Age:** 16
-- **Roblox Experience:** 12 years
+<td valign="top">
 
-Thanks for checking out this project.
+# SLAV
+
+**Age:** 16
+
+**Roblox Experience:** 12 Years
+
+Creator of this project.
+
+</td>
+
+</tr>
+</table>
+
+---
+
+Thank you for checking out this project.
+
+If you enjoy the project, please consider leaving a ⭐ on the repository.
