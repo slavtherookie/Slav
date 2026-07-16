@@ -7,6 +7,16 @@ local function GetGithubFile(path)
 	return string.format("https://raw.githubusercontent.com/%s/%s/refs/heads/%s/%s%s", creator, githubrepo, branch, pathBase, path)
 end
 
+-- [ AUTO-EXECUTE ON REJOIN / SERVER HOP ]
+local teleportFunc = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or (getgenv and getgenv().queue_on_teleport)
+if teleportFunc then
+	local execStr = string.format([[
+		task.wait(1)
+		loadstring(game:HttpGet("https://raw.githubusercontent.com/%s/%s/refs/heads/%s/%smain.luau"))()
+	]], creator, githubrepo, branch, pathBase)
+	pcall(function() teleportFunc(execStr) end)
+end
+
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
@@ -627,11 +637,19 @@ local function PopulateCommandList()
 		T.Position = UDim2.new(0, 12, 0, 6)
 		T.Size = UDim2.new(1, -24, 0, 16)
 		T.BackgroundTransparency = 1
-		T.Text = cmd.Name .. " " .. cmd.ArgHint
+		
+		-- Format name with aliases to make it obvious they exist
+		local aliasText = ""
+		if cmd.Aliases and #cmd.Aliases > 0 then
+			aliasText = " [" .. table.concat(cmd.Aliases, ", ") .. "]"
+		end
+		
+		T.Text = cmd.Name .. aliasText .. " " .. cmd.ArgHint
 		T.TextColor3 = Color3.fromRGB(255, 255, 255)
 		T.Font = Enum.Font.GothamMedium
 		T.TextSize = 13
 		T.TextXAlignment = Enum.TextXAlignment.Left
+		T.TextTruncate = Enum.TextTruncate.AtEnd
 		
 		local D = Instance.new("TextLabel", F)
 		D.Position = UDim2.new(0, 12, 0, 22)
@@ -738,6 +756,21 @@ local function CreateSuggestion(iconId, titleText, subText, autoFillText)
 	TweenService:Create(Frame, smoothTween, {Size = UDim2.new(1, 0, 0, 44)}):Play()
 end
 
+-- Helper to check if what user is typing matches a Command Name OR one of its Aliases (e.g. typing "unwi" will match "unwireframe")
+local function IsCommandMatch(cmd, query)
+	if string.sub(cmd.Name, 1, #query) == query then 
+		return true, cmd.Name 
+	end
+	if cmd.Aliases then
+		for _, alias in ipairs(cmd.Aliases) do
+			if string.sub(alias, 1, #query) == query then 
+				return true, alias 
+			end
+		end
+	end
+	return false, nil
+end
+
 TextBox:GetPropertyChangedSignal("Text"):Connect(function()
 	if TextBox.Text == ";" and not isFocused then
 		TextBox.Text = ""
@@ -754,20 +787,24 @@ TextBox:GetPropertyChangedSignal("Text"):Connect(function()
 	if #args == 1 then
 		local count = 0
 		for _, cmd in ipairs(CommandRegistry) do
-			if string.sub(cmd.Name, 1, #cmdQuery) == cmdQuery or (cmd.Aliases and table.find(cmd.Aliases, cmdQuery)) then
+			local match, matchStr = IsCommandMatch(cmd, cmdQuery)
+			if match then
 				if count >= 4 then break end
-				CreateSuggestion(MAIN_ICON, cmd.Name .. " " .. cmd.ArgHint, cmd.Description, cmd.Name .. " ")
+				-- Uses the exact string that matched (whether command name or alias) for the autofill
+				CreateSuggestion(MAIN_ICON, matchStr .. " " .. cmd.ArgHint, cmd.Description, matchStr .. " ")
 				count += 1
 			end
 		end
 	elseif #args >= 2 then
 		local selectedCmd = nil
 		for _, cmd in ipairs(CommandRegistry) do
-			if string.sub(cmd.Name, 1, #cmdQuery) == cmdQuery or (cmd.Aliases and table.find(cmd.Aliases, cmdQuery)) then
+			local match, matchStr = IsCommandMatch(cmd, cmdQuery)
+			if match then
 				selectedCmd = cmd
 				break
 			end
 		end
+		
 		if selectedCmd and selectedCmd.ArgType == "player" then
 			if #args == 2 then
 				local count = 0
@@ -776,7 +813,7 @@ TextBox:GetPropertyChangedSignal("Text"):Connect(function()
 					if string.find(string.lower(p.Name), playerQuery) or string.find(string.lower(p.DisplayName), playerQuery) then
 						if count >= 4 then break end
 						local thumb = Players:GetUserThumbnailAsync(p.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
-						CreateSuggestion(thumb, p.DisplayName, "@" .. p.Name, selectedCmd.Name .. " " .. p.Name .. " ")
+						CreateSuggestion(thumb, p.DisplayName, "@" .. p.Name, args[1] .. " " .. p.Name .. " ")
 						count += 1
 					end
 				end
@@ -960,5 +997,5 @@ task.spawn(function()
 	HoverZone.Visible = true
 	Watermark.Visible = true
 	UpdateUIState()
-	Notify("Paper", "github @slavtherookie for more updates!", GITHUB_ICON)
+		Notify("Paper", "Loaded Successfully! Auto-execute enabled.", MAIN_ICON)
 end)
