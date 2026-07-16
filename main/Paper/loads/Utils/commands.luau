@@ -1,5 +1,5 @@
 local PaperAPI = ...
-local RegisterCommand = PaperAPI.RegisterCommand
+local OriginalRegisterCommand = PaperAPI.RegisterCommand
 local Notify = PaperAPI.Notify
 local GetPlayer = PaperAPI.GetPlayer
 local SetUIExpanded = PaperAPI.SetUIExpanded
@@ -7,6 +7,19 @@ local SetWatermarkVisible = PaperAPI.SetWatermarkVisible
 local SetNotifsEnabled = PaperAPI.SetNotifsEnabled
 local TracerContainer = PaperAPI.TracerContainer
 local TargetGui = PaperAPI.TargetGui
+
+local LocalCmdRegistry = {}
+
+local function RegisterCommand(name, aliases, argHint, argType, description, callback)
+	table.insert(LocalCmdRegistry, {
+		Name = name,
+		Aliases = aliases,
+		ArgHint = argHint,
+		ArgType = argType,
+		Description = description
+	})
+	OriginalRegisterCommand(name, aliases, argHint, argType, description, callback)
+end
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -455,14 +468,36 @@ RegisterCommand("notepad", {"notes", "editor"}, "", "none", "Opens the Paper Not
 	end
 end)
 
-RegisterCommand("bettersync", {"bsync"}, "[key]", "none", "Toggles BetterSync with optional key", function(args)
+RegisterCommand("cmds", {"commands", "help"}, "", "none", "Opens the Commands UI", function(args)
+	Notify("Commands", "Loading Commands UI...")
+	local success, err = pcall(function()
+		loadstring(game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/cmds.luau"))(LocalCmdRegistry)
+	end)
+	
+	if not success then
+		Notify("Error", "Failed to load Commands UI: " .. tostring(err))
+	end
+end)
+
+RegisterCommand("bettersync", {"bsync"}, "[key]", "none", "Enables BetterSync with optional key", function(args)
 	local key = args[2] or "G"
 	local success, err = pcall(function()
-		loadstring(game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/BetterSync.luau"))(key)
+		loadstring(game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/BetterSync.luau"))("start", key)
 	end)
 	if success then
-		Notify("BetterSync", "Executed BetterSync (Key: " .. string.upper(key) .. " / Disable on re-run)")
+		Notify("BetterSync", "Executed BetterSync (Key: " .. string.upper(key) .. ")")
 	else
 		Notify("Error", "Failed to load BetterSync: " .. tostring(err))
+	end
+end)
+
+RegisterCommand("unbettersync", {"unbsync"}, "", "none", "Disables BetterSync", function(args)
+	local success, err = pcall(function()
+		loadstring(game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/BetterSync.luau"))("cleanup")
+	end)
+	if success then
+		Notify("BetterSync", "Disabled BetterSync")
+	else
+		Notify("Error", "Failed to disable BetterSync")
 	end
 end)
