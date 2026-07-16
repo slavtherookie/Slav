@@ -438,12 +438,7 @@ RegisterCommand("cmds", {"commands", "help"}, "", "none", "Opens the Commands UI
 	local success, err = pcall(function()
 		local src = game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/cmds.luau")
 		local fn = loadstring(src)
-		if fn then
-			local resFn = fn()
-			if type(resFn) == "function" then resFn(LocalCmdRegistry) end
-		else
-			Notify("Error", "Failed to compile Commands UI")
-		end
+		if fn then fn(LocalCmdRegistry) else Notify("Error", "Failed to compile Commands UI") end
 	end)
 	if not success then Notify("Error", "Failed to load Commands UI: " .. tostring(err)) end
 end)
@@ -455,12 +450,7 @@ RegisterCommand("info", {"whois", "playerinfo"}, "[player]", "player", "Displays
 	local success, err = pcall(function()
 		local src = game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/PlayerInfo.luau")
 		local fn = loadstring(src)
-		if fn then
-			local resFn = fn()
-			if type(resFn) == "function" then resFn(target) end
-		else
-			Notify("Error", "Failed to compile PlayerInfo source")
-		end
+		if fn then fn()(target) else Notify("Error", "Failed to compile PlayerInfo source") end
 	end)
 	if not success then Notify("Error", "Information UI: " .. tostring(err)) end
 end)
@@ -470,12 +460,7 @@ RegisterCommand("bettersync", {"bsync"}, "[key]", "none", "Enables BetterSync wi
 	local success, err = pcall(function()
 		local src = game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/BetterSync.luau")
 		local fn = loadstring(src)
-		if fn then
-			local resFn = fn()
-			if type(resFn) == "function" then resFn("start", key) end
-		else
-			Notify("Error", "Failed to compile BetterSync")
-		end
+		if fn then fn("start", key) else Notify("Error", "Failed to compile BetterSync") end
 	end)
 	if success then Notify("BetterSync", "Executed BetterSync (Key: " .. string.upper(key) .. ")") else Notify("Error", "Failed to load BetterSync: " .. tostring(err)) end
 end)
@@ -484,10 +469,7 @@ RegisterCommand("unbettersync", {"unbsync"}, "", "none", "Disables BetterSync", 
 	local success, err = pcall(function()
 		local src = game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/BetterSync.luau")
 		local fn = loadstring(src)
-		if fn then
-			local resFn = fn()
-			if type(resFn) == "function" then resFn("cleanup") end
-		end
+		if fn then fn("cleanup") else Notify("Error", "Failed to compile BetterSync") end
 	end)
 	if success then Notify("BetterSync", "Disabled BetterSync") else Notify("Error", "Failed to disable BetterSync") end
 end)
