@@ -439,6 +439,16 @@ RegisterCommand("cmds", {"commands", "help"}, "", "none", "Opens the Commands UI
 	if not success then Notify("Error", "Failed to load Commands UI: " .. tostring(err)) end
 end)
 
+RegisterCommand("info", {"whois", "playerinfo"}, "[player]", "player", "Displays detailed player information", function(args)
+	local target = GetPlayer(args[2])
+	if not target then return Notify("Error", "Player not found") end
+	Notify("Info", "Loading profile for " .. target.DisplayName .. "...")
+	local success, err = pcall(function()
+		loadstring(game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/Information.luau"))()(target)
+	end)
+	if not success then Notify("Error", "Failed to load Information UI: " .. tostring(err)) end
+end)
+
 RegisterCommand("bettersync", {"bsync"}, "[key]", "none", "Enables BetterSync with optional key", function(args)
 	local key = args[2] or "G"
 	local success, err = pcall(function()
