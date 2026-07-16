@@ -18,12 +18,10 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = targetGui
 
--- Updated Animations: Smoother, more dynamic easing styles
 local fastTween = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local slickTween = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 local bounceTween = TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
--- Main Container (Deep black theme)
 local MainPanel = Instance.new("Frame")
 MainPanel.Parent = ScreenGui
 MainPanel.Size = UDim2.new(0, 540, 0, 360)
