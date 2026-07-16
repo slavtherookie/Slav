@@ -22,7 +22,6 @@ local flyConn = nil
 local flyPart = nil
 local flyGyro = nil
 
--- Freecam Variables
 local fcEnabled = false
 local fcBaseSpeed = 50
 local fcSpeed = fcBaseSpeed
@@ -174,8 +173,6 @@ RunService.RenderStepped:Connect(function(dt)
 
 	cam.CFrame = CFrame.new(cam.CFrame.Position + fcVelocity * dt) * rotationCFrame
 end)
-
--- Command Registry 
 
 RegisterCommand("expand", {"open", "ui"}, "", "none", "Expands the UI to show all commands", function(args)
 	SetUIExpanded(true)
@@ -455,5 +452,17 @@ RegisterCommand("notepad", {"notes", "editor"}, "", "none", "Opens the Paper Not
 	
 	if not success then
 		Notify("Error", "Failed to load Notepad: " .. tostring(err))
+	end
+end)
+
+RegisterCommand("bettersync", {"bsync"}, "[key]", "none", "Toggles BetterSync with optional key", function(args)
+	local key = args[2] or "G"
+	local success, err = pcall(function()
+		loadstring(game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/BetterSync.luau"))(key)
+	end)
+	if success then
+		Notify("BetterSync", "Executed BetterSync (Key: " .. string.upper(key) .. " / Disable on re-run)")
+	else
+		Notify("Error", "Failed to load BetterSync: " .. tostring(err))
 	end
 end)
