@@ -46,6 +46,59 @@ local originalCamSubject = nil
 local oldLighting = {}
 local isFullbright = false
 
+local originalLighting = nil
+local originalCamera = nil
+local originalCharProps = {}
+local originalWorkspaceProps = nil
+
+local function cacheLighting()
+    if not originalLighting then
+        originalLighting = {
+            Ambient = Lighting.Ambient,
+            Brightness = Lighting.Brightness,
+            ClockTime = Lighting.ClockTime,
+            FogEnd = Lighting.FogEnd,
+            GlobalShadows = Lighting.GlobalShadows
+        }
+    end
+end
+
+local function cacheCamera()
+    if not originalCamera and Workspace.CurrentCamera then
+        originalCamera = {
+            FieldOfView = Workspace.CurrentCamera.FieldOfView,
+            CameraType = Workspace.CurrentCamera.CameraType,
+            CameraSubject = Workspace.CurrentCamera.CameraSubject
+        }
+    end
+end
+
+local function cacheCharacter()
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") and not originalCharProps[char] then
+        local hum = char.Humanoid
+        originalCharProps[char] = {
+            WalkSpeed = hum.WalkSpeed,
+            JumpPower = hum.JumpPower,
+            UseJumpPower = hum.UseJumpPower,
+            HipHeight = hum.HipHeight,
+            MaxHealth = hum.MaxHealth,
+            BodyWidthScale = hum:FindFirstChild("BodyWidthScale") and hum.BodyWidthScale.Value or 1,
+            BodyHeightScale = hum:FindFirstChild("BodyHeightScale") and hum.BodyHeightScale.Value or 1,
+            BodyDepthScale = hum:FindFirstChild("BodyDepthScale") and hum.BodyDepthScale.Value or 1,
+            HeadScale = hum:FindFirstChild("HeadScale") and hum.HeadScale.Value or 1
+        }
+    end
+end
+
+local function cacheWorkspace()
+    if not originalWorkspaceProps then
+        originalWorkspaceProps = {
+            Gravity = Workspace.Gravity
+        }
+    end
+end
+
 local fcEnabled = false
 local fcBaseSpeed, fcSpeed = 50, 50
 local fcSpeedStep, fcMinSpeed, fcMaxSpeed = 15, 5, 500
@@ -232,6 +285,7 @@ RegisterCommand("joinlink", {"link"}, "", "none", "Copies join link", function()
 end)
 
 RegisterCommand("fov", {"fieldofview"}, "[num]", "none", "Changes FOV", function(args)
+    cacheCamera()
     local num = tonumber(args[2])
     if num then
         Workspace.CurrentCamera.FieldOfView = num
@@ -279,6 +333,7 @@ RegisterCommand("reset", {"kill", "die"}, "", "none", "Kills your character", fu
 end)
 
 RegisterCommand("speed", {"ws", "walkspeed"}, "[num]", "none", "Changes WalkSpeed", function(args)
+    cacheCharacter()
     local amount = tonumber(args[2])
     if amount and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         LocalPlayer.Character.Humanoid.WalkSpeed = amount
@@ -287,6 +342,7 @@ RegisterCommand("speed", {"ws", "walkspeed"}, "[num]", "none", "Changes WalkSpee
 end)
 
 RegisterCommand("jumppower", {"jp"}, "[num]", "none", "Changes JumpPower", function(args)
+    cacheCharacter()
     local amount = tonumber(args[2])
     if amount and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         LocalPlayer.Character.Humanoid.UseJumpPower = true
@@ -365,6 +421,7 @@ RegisterCommand("unfullbright", {"unfb"}, "", "none", "Restores lighting", funct
 end)
 
 RegisterCommand("gravity", {"grav"}, "[num]", "none", "Sets gravity", function(args)
+    cacheWorkspace()
     local amount = tonumber(args[2])
     if amount then
         Workspace.Gravity = amount
@@ -422,6 +479,7 @@ RegisterCommand("unfreeze", {"unanchor"}, "", "none", "Unanchors character", fun
 end)
 
 RegisterCommand("health", {"hp"}, "[num]", "none", "Sets local HP", function(args)
+    cacheCharacter()
     local amount = tonumber(args[2])
     if amount and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         LocalPlayer.Character.Humanoid.Health = amount
@@ -429,6 +487,7 @@ RegisterCommand("health", {"hp"}, "[num]", "none", "Sets local HP", function(arg
 end)
 
 RegisterCommand("maxhealth", {"maxhp"}, "[num]", "none", "Sets local MaxHP", function(args)
+    cacheCharacter()
     local amount = tonumber(args[2])
     if amount and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         LocalPlayer.Character.Humanoid.MaxHealth = amount
@@ -470,6 +529,7 @@ RegisterCommand("showui", {"sui"}, "", "none", "Shows CoreUI", function()
 end)
 
 RegisterCommand("hipheight", {"hh"}, "[num]", "none", "Adjusts hipheight", function(args)
+    cacheCharacter()
     local amount = tonumber(args[2])
     if amount and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         LocalPlayer.Character.Humanoid.HipHeight = amount
@@ -517,6 +577,7 @@ RegisterCommand("unstun", {"unragdoll"}, "", "none", "Unstuns character", functi
 end)
 
 RegisterCommand("zoom", {}, "[num]", "none", "Sets MaxZoom", function(args)
+    cacheCamera()
     local amount = tonumber(args[2])
     if amount then
         LocalPlayer.CameraMaxZoomDistance = amount
@@ -524,10 +585,12 @@ RegisterCommand("zoom", {}, "[num]", "none", "Sets MaxZoom", function(args)
 end)
 
 RegisterCommand("firstperson", {"fp"}, "", "none", "Forces FP", function()
+    cacheCamera()
     LocalPlayer.CameraMode = Enum.CameraMode.LockFirstPerson
 end)
 
 RegisterCommand("thirdperson", {"tp"}, "", "none", "Unlocks TP", function()
+    cacheCamera()
     LocalPlayer.CameraMode = Enum.CameraMode.Classic
     LocalPlayer.CameraMaxZoomDistance = 400
 end)
@@ -548,6 +611,7 @@ RegisterCommand("walkto", {}, "[x] [y] [z]", "none", "Walk to coords", function(
 end)
 
 RegisterCommand("brightness", {}, "[num]", "none", "Sets brightness", function(args)
+    cacheLighting()
     local amount = tonumber(args[2])
     if amount then
         Lighting.Brightness = amount
@@ -555,6 +619,7 @@ RegisterCommand("brightness", {}, "[num]", "none", "Sets brightness", function(a
 end)
 
 RegisterCommand("clocktime", {"time"}, "[num]", "none", "Sets time", function(args)
+    cacheLighting()
     local amount = tonumber(args[2])
     if amount then
         Lighting.ClockTime = amount
@@ -562,14 +627,17 @@ RegisterCommand("clocktime", {"time"}, "[num]", "none", "Sets time", function(ar
 end)
 
 RegisterCommand("nofog", {}, "", "none", "Removes fog", function()
+    cacheLighting()
     Lighting.FogEnd = 100000
 end)
 
 RegisterCommand("shadows", {}, "", "none", "Enables shadows", function()
+    cacheLighting()
     Lighting.GlobalShadows = true
 end)
 
 RegisterCommand("noshadows", {}, "", "none", "Disables shadows", function()
+    cacheLighting()
     Lighting.GlobalShadows = false
 end)
 
@@ -1117,6 +1185,7 @@ RegisterCommand("screenshake", {"shake"}, "", "none", "Shakes screen", function(
 end)
 
 RegisterCommand("disco", {"rainbow"}, "", "none", "Rainbow lighting", function()
+    cacheLighting()
     if discoConn then
         discoConn:Disconnect()
         discoConn = nil
@@ -1192,10 +1261,12 @@ local function modScale(scaleValue)
 end
 
 RegisterCommand("giant", {}, "", "none", "Makes you locally giant", function()
+    cacheCharacter()
     modScale(3)
 end)
 
 RegisterCommand("tiny", {}, "", "none", "Makes you locally tiny", function()
+    cacheCharacter()
     modScale(0.3)
 end)
 
@@ -1204,18 +1275,21 @@ RegisterCommand("normalscale", {}, "", "none", "Resets scale", function()
 end)
 
 RegisterCommand("wide", {}, "", "none", "Makes you wide", function()
+    cacheCharacter()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") and LocalPlayer.Character.Humanoid:FindFirstChild("BodyWidthScale") then
         LocalPlayer.Character.Humanoid.BodyWidthScale.Value = 3
     end
 end)
 
 RegisterCommand("flat", {}, "", "none", "Makes you flat", function()
+    cacheCharacter()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") and LocalPlayer.Character.Humanoid:FindFirstChild("BodyDepthScale") then
         LocalPlayer.Character.Humanoid.BodyDepthScale.Value = 0.1
     end
 end)
 
 RegisterCommand("noarms", {}, "", "none", "Removes arms locally", function()
+    cacheCharacter()
     if LocalPlayer.Character then
         for _, part in pairs(LocalPlayer.Character:GetChildren()) do
             if part.Name:match("Arm") or part.Name:match("Hand") then
@@ -1226,6 +1300,7 @@ RegisterCommand("noarms", {}, "", "none", "Removes arms locally", function()
 end)
 
 RegisterCommand("nolegs", {}, "", "none", "Removes legs locally", function()
+    cacheCharacter()
     if LocalPlayer.Character then
         for _, part in pairs(LocalPlayer.Character:GetChildren()) do
             if part.Name:match("Leg") or part.Name:match("Foot") then
@@ -1236,6 +1311,7 @@ RegisterCommand("nolegs", {}, "", "none", "Removes legs locally", function()
 end)
 
 RegisterCommand("torsoonly", {}, "", "none", "Leaves only torso", function()
+    cacheCharacter()
     if LocalPlayer.Character then
         for _, part in pairs(LocalPlayer.Character:GetChildren()) do
             if part:IsA("BasePart") and not part.Name:match("Torso") then
@@ -1282,42 +1358,49 @@ RegisterCommand("spamjump", {}, "", "none", "Spams jump", function()
 end)
 
 RegisterCommand("walk", {}, "", "none", "Speed 16", function()
+    cacheCharacter()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         LocalPlayer.Character.Humanoid.WalkSpeed = 16
     end
 end)
 
 RegisterCommand("run", {}, "", "none", "Speed 30", function()
+    cacheCharacter()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         LocalPlayer.Character.Humanoid.WalkSpeed = 30
     end
 end)
 
 RegisterCommand("sprint", {}, "", "none", "Speed 50", function()
+    cacheCharacter()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         LocalPlayer.Character.Humanoid.WalkSpeed = 50
     end
 end)
 
 RegisterCommand("flashspeed", {}, "", "none", "Speed 200", function()
+    cacheCharacter()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         LocalPlayer.Character.Humanoid.WalkSpeed = 200
     end
 end)
 
 RegisterCommand("slowwalk", {}, "", "none", "Speed 8", function()
+    cacheCharacter()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         LocalPlayer.Character.Humanoid.WalkSpeed = 8
     end
 end)
 
 RegisterCommand("crawl", {}, "", "none", "Speed 4", function()
+    cacheCharacter()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         LocalPlayer.Character.Humanoid.WalkSpeed = 4
     end
 end)
 
 RegisterCommand("lowjump", {}, "", "none", "Jump 25", function()
+    cacheCharacter()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         LocalPlayer.Character.Humanoid.UseJumpPower = true
         LocalPlayer.Character.Humanoid.JumpPower = 25
@@ -1325,6 +1408,7 @@ RegisterCommand("lowjump", {}, "", "none", "Jump 25", function()
 end)
 
 RegisterCommand("highjump", {}, "", "none", "Jump 100", function()
+    cacheCharacter()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         LocalPlayer.Character.Humanoid.UseJumpPower = true
         LocalPlayer.Character.Humanoid.JumpPower = 100
@@ -1332,6 +1416,7 @@ RegisterCommand("highjump", {}, "", "none", "Jump 100", function()
 end)
 
 RegisterCommand("superjump", {}, "", "none", "Jump 250", function()
+    cacheCharacter()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         LocalPlayer.Character.Humanoid.UseJumpPower = true
         LocalPlayer.Character.Humanoid.JumpPower = 250
@@ -1339,6 +1424,7 @@ RegisterCommand("superjump", {}, "", "none", "Jump 250", function()
 end)
 
 RegisterCommand("megajump", {}, "", "none", "Jump 500", function()
+    cacheCharacter()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         LocalPlayer.Character.Humanoid.UseJumpPower = true
         LocalPlayer.Character.Humanoid.JumpPower = 500
@@ -1432,38 +1518,47 @@ RegisterCommand("right", {}, "[num]", "none", "TP right studs", function(args)
 end)
 
 RegisterCommand("day", {"morning"}, "", "none", "Time 14", function()
+    cacheLighting()
     Lighting.ClockTime = 14
 end)
 
 RegisterCommand("night", {"midnight"}, "", "none", "Time 0", function()
+    cacheLighting()
     Lighting.ClockTime = 0
 end)
 
 RegisterCommand("dawn", {"sunrise"}, "", "none", "Time 6", function()
+    cacheLighting()
     Lighting.ClockTime = 6
 end)
 
 RegisterCommand("dusk", {"sunset"}, "", "none", "Time 18", function()
+    cacheLighting()
     Lighting.ClockTime = 18
 end)
 
 RegisterCommand("redsky", {}, "", "none", "Red ambient", function()
+    cacheLighting()
     Lighting.Ambient = Color3.new(1, 0, 0)
 end)
 
 RegisterCommand("bluesky", {}, "", "none", "Blue ambient", function()
+    cacheLighting()
     Lighting.Ambient = Color3.new(0, 0, 1)
 end)
 
 RegisterCommand("greensky", {}, "", "none", "Green ambient", function()
+    cacheLighting()
     Lighting.Ambient = Color3.new(0, 1, 0)
 end)
 
 RegisterCommand("blacksky", {}, "", "none", "Black ambient", function()
+    cacheLighting()
     Lighting.Ambient = Color3.new(0, 0, 0)
 end)
 
 RegisterCommand("whitesky", {}, "", "none", "White ambient", function()
+    cacheLighting()
     Lighting.Ambient = Color3.new(1, 1, 1)
 end)
 
@@ -1606,10 +1701,12 @@ RegisterCommand("highquality", {"hq"}, "", "none", "Max Graphics Mode", function
 end)
 
 RegisterCommand("invertcam", {}, "", "none", "Upside down cam", function()
+    cacheCamera()
     Workspace.CurrentCamera.CFrame = Workspace.CurrentCamera.CFrame * CFrame.Angles(0, 0, math.rad(180))
 end)
 
 RegisterCommand("topdown", {}, "", "none", "Top down view", function()
+    cacheCamera()
     Workspace.CurrentCamera.CameraType = Enum.CameraType.Scriptable
     Workspace.CurrentCamera.CFrame = CFrame.new(getRoot(LocalPlayer.Character).Position + Vector3.new(0, 50, 0), getRoot(LocalPlayer.Character).Position)
 end)
@@ -1906,6 +2003,7 @@ RegisterCommand("unsunrays", {}, "", "none", "Removes sunrays", function()
 end)
 
 RegisterCommand("matrix", {}, "", "none", "Matrix vision", function()
+    cacheLighting()
     local cc = Lighting:FindFirstChild("PaperMatrix")
     if not cc then
         cc = Instance.new("ColorCorrectionEffect", Lighting)
@@ -1923,6 +2021,7 @@ RegisterCommand("unmatrix", {}, "", "none", "Removes matrix", function()
 end)
 
 RegisterCommand("deepfry", {}, "", "none", "Deepfry screen", function()
+    cacheLighting()
     local cc = Lighting:FindFirstChild("PaperDeepfry")
     if not cc then
         cc = Instance.new("ColorCorrectionEffect", Lighting)
@@ -1973,12 +2072,14 @@ RegisterCommand("drop", {}, "", "none", "Zeroes vertical velocity", function()
 end)
 
 RegisterCommand("noface", {"removeface"}, "", "none", "Removes local face", function()
+    cacheCharacter()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") and LocalPlayer.Character.Head:FindFirstChild("face") then
         LocalPlayer.Character.Head.face:Destroy()
     end
 end)
 
 RegisterCommand("deletehats", {"nohats"}, "", "none", "Removes hats locally", function()
+    cacheCharacter()
     if LocalPlayer.Character then
         for _, obj in pairs(LocalPlayer.Character:GetChildren()) do
             if obj:IsA("Accessory") then
@@ -1989,6 +2090,7 @@ RegisterCommand("deletehats", {"nohats"}, "", "none", "Removes hats locally", fu
 end)
 
 RegisterCommand("naked", {}, "", "none", "Removes clothing locally", function()
+    cacheCharacter()
     if LocalPlayer.Character then
         for _, obj in pairs(LocalPlayer.Character:GetChildren()) do
             if obj:IsA("Shirt") or obj:IsA("Pants") or obj:IsA("ShirtGraphic") then
@@ -2080,7 +2182,135 @@ RegisterCommand("solidchams", {}, "", "none", "Solid White ESP", function()
     end
 end)
 
+RegisterCommand("fixlighting", {"unlighting", "normallighting"}, "", "none", "Restores lighting", function()
+    if originalLighting then
+        Lighting.Ambient = originalLighting.Ambient
+        Lighting.Brightness = originalLighting.Brightness
+        Lighting.ClockTime = originalLighting.ClockTime
+        Lighting.FogEnd = originalLighting.FogEnd
+        Lighting.GlobalShadows = originalLighting.GlobalShadows
+        if originalLighting.ColorShift_Bottom then
+            pcall(function() Lighting.ColorShift_Bottom = originalLighting.ColorShift_Bottom end)
+        end
+        if originalLighting.ColorShift_Top then
+            pcall(function() Lighting.ColorShift_Top = originalLighting.ColorShift_Top end)
+        end
+        if originalLighting.OutdoorAmbient then
+            pcall(function() Lighting.OutdoorAmbient = originalLighting.OutdoorAmbient end)
+        end
+    end
+end)
+
+RegisterCommand("fixchar", {"restorechar", "unchar"}, "", "none", "Restores character parts/stats", function()
+    if LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") or part:IsA("Decal") then
+                part.Transparency = 0
+            end
+        end
+        if originalCharProps[LocalPlayer.Character] and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            local props = originalCharProps[LocalPlayer.Character]
+            local hum = LocalPlayer.Character.Humanoid
+            hum.WalkSpeed = props.WalkSpeed
+            hum.JumpPower = props.JumpPower
+            hum.UseJumpPower = props.UseJumpPower
+            hum.HipHeight = props.HipHeight
+            hum.MaxHealth = props.MaxHealth
+            if hum:FindFirstChild("BodyWidthScale") then hum.BodyWidthScale.Value = props.BodyWidthScale end
+            if hum:FindFirstChild("BodyHeightScale") then hum.BodyHeightScale.Value = props.BodyHeightScale end
+            if hum:FindFirstChild("BodyDepthScale") then hum.BodyDepthScale.Value = props.BodyDepthScale end
+            if hum:FindFirstChild("HeadScale") then hum.HeadScale.Value = props.HeadScale end
+        end
+    end
+end)
+
+RegisterCommand("fixcam", {"uncam", "normalcam"}, "", "none", "Resets Camera", function()
+    Workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        Workspace.CurrentCamera.CameraSubject = LocalPlayer.Character.Humanoid
+    end
+    if originalCamera then
+        Workspace.CurrentCamera.FieldOfView = originalCamera.FieldOfView
+    else
+        Workspace.CurrentCamera.FieldOfView = 70
+    end
+    LocalPlayer.CameraMode = Enum.CameraMode.Classic
+    LocalPlayer.CameraMaxZoomDistance = 400
+end)
+
+RegisterCommand("revertall", {"unall", "resetall"}, "", "none", "Reverts all cacheable commands", function()
+    pcall(function() LocalCmdRegistry[#LocalCmdRegistry].Callback() end) -- This is a bit hacky, let's call the functions directly.
+    -- Wait, instead of calling the registry, I'll just run the logic of the normal commands.
+    
+    -- Fix Lighting
+    if originalLighting then
+        Lighting.Ambient = originalLighting.Ambient
+        Lighting.Brightness = originalLighting.Brightness
+        Lighting.ClockTime = originalLighting.ClockTime
+        Lighting.FogEnd = originalLighting.FogEnd
+        Lighting.GlobalShadows = originalLighting.GlobalShadows
+    end
+    
+    -- Fix Char
+    if LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") or part:IsA("Decal") then
+                part.Transparency = 0
+            end
+        end
+        if originalCharProps[LocalPlayer.Character] and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            local props = originalCharProps[LocalPlayer.Character]
+            local hum = LocalPlayer.Character.Humanoid
+            hum.WalkSpeed = props.WalkSpeed
+            hum.JumpPower = props.JumpPower
+            hum.UseJumpPower = props.UseJumpPower
+            hum.HipHeight = props.HipHeight
+            hum.MaxHealth = props.MaxHealth
+            if hum:FindFirstChild("BodyWidthScale") then hum.BodyWidthScale.Value = props.BodyWidthScale end
+            if hum:FindFirstChild("BodyHeightScale") then hum.BodyHeightScale.Value = props.BodyHeightScale end
+            if hum:FindFirstChild("BodyDepthScale") then hum.BodyDepthScale.Value = props.BodyDepthScale end
+            if hum:FindFirstChild("HeadScale") then hum.HeadScale.Value = props.HeadScale end
+        end
+    end
+    
+    -- Fix Cam
+    Workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        Workspace.CurrentCamera.CameraSubject = LocalPlayer.Character.Humanoid
+    end
+    if originalCamera then
+        Workspace.CurrentCamera.FieldOfView = originalCamera.FieldOfView
+    else
+        Workspace.CurrentCamera.FieldOfView = 70
+    end
+    LocalPlayer.CameraMode = Enum.CameraMode.Classic
+    LocalPlayer.CameraMaxZoomDistance = 400
+    
+    -- Fix World
+    if next(originalPartProperties) then
+        for part, props in pairs(originalPartProperties) do
+            if part and part.Parent then
+                part.Material = props.Material
+                part.TopSurface = props.TopSurface
+                part.BottomSurface = props.BottomSurface
+                part.Transparency = props.Transparency
+                local wire = part:FindFirstChild("PaperWireframe")
+                if wire then
+                    wire:Destroy()
+                end
+            end
+        end
+        originalPartProperties = {}
+    end
+    
+    -- Fix Workspace
+    if originalWorkspaceProps then
+        Workspace.Gravity = originalWorkspaceProps.Gravity
+    end
+end)
+
 RegisterCommand("flipcam", {}, "", "none", "Rolls camera sideways", function()
+    cacheCamera()
     Workspace.CurrentCamera.CFrame = Workspace.CurrentCamera.CFrame * CFrame.Angles(0, 0, math.rad(90))
 end)
 
@@ -2121,12 +2351,14 @@ end
 
 for i = 0, 10 do
     RegisterCommand("brightness" .. i, {"b" .. i}, "", "none", "Set Brightness " .. i, function()
+    cacheLighting()
         Lighting.Brightness = i
     end)
 end
 
 for i = 10, 150, 10 do
     RegisterCommand("fov" .. i, {}, "", "none", "FOV " .. i, function()
+    cacheCamera()
         Workspace.CurrentCamera.FieldOfView = i
     end)
 end
