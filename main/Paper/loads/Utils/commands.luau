@@ -446,7 +446,7 @@ RegisterCommand("info", {"whois", "playerinfo"}, "[player]", "player", "Displays
 	local success, err = pcall(function()
 		loadstring(game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/PlayerInfo.luau"))()(target)
 	end)
-	if not success then Notify("Error", "Failed to load Information UI: " .. tostring(err)) end
+	if not success then Notify("Error", "Information UI: " .. tostring(err)) end
 end)
 
 RegisterCommand("bettersync", {"bsync"}, "[key]", "none", "Enables BetterSync with optional key", function(args)
