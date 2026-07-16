@@ -426,7 +426,9 @@ end)
 RegisterCommand("notepad", {"notes", "editor"}, "", "none", "Opens the Paper Notepad script editor", function(args)
 	Notify("Notepad", "Loading Notepad...")
 	local success, err = pcall(function()
-		loadstring(game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/Notepad.luau"))()
+		local src = game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/Notepad.luau")
+		local fn = loadstring(src)
+		if fn then fn() else Notify("Error", "Failed to compile Notepad") end
 	end)
 	if not success then Notify("Error", "Failed to load Notepad: " .. tostring(err)) end
 end)
@@ -434,7 +436,14 @@ end)
 RegisterCommand("cmds", {"commands", "help"}, "", "none", "Opens the Commands UI", function(args)
 	Notify("Commands", "Loading Commands UI...")
 	local success, err = pcall(function()
-		loadstring(game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/cmds.luau"))(LocalCmdRegistry)
+		local src = game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/cmds.luau")
+		local fn = loadstring(src)
+		if fn then
+			local resFn = fn()
+			if type(resFn) == "function" then resFn(LocalCmdRegistry) end
+		else
+			Notify("Error", "Failed to compile Commands UI")
+		end
 	end)
 	if not success then Notify("Error", "Failed to load Commands UI: " .. tostring(err)) end
 end)
@@ -444,7 +453,14 @@ RegisterCommand("info", {"whois", "playerinfo"}, "[player]", "player", "Displays
 	if not target then return Notify("Error", "Player not found") end
 	Notify("Info", "Loading profile for " .. target.DisplayName .. "...")
 	local success, err = pcall(function()
-		loadstring(game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/PlayerInfo.luau"))()(target)
+		local src = game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/PlayerInfo.luau")
+		local fn = loadstring(src)
+		if fn then
+			local resFn = fn()
+			if type(resFn) == "function" then resFn(target) end
+		else
+			Notify("Error", "Failed to compile PlayerInfo source")
+		end
 	end)
 	if not success then Notify("Error", "Information UI: " .. tostring(err)) end
 end)
@@ -452,14 +468,26 @@ end)
 RegisterCommand("bettersync", {"bsync"}, "[key]", "none", "Enables BetterSync with optional key", function(args)
 	local key = args[2] or "G"
 	local success, err = pcall(function()
-		loadstring(game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/BetterSync.luau"))("start", key)
+		local src = game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/BetterSync.luau")
+		local fn = loadstring(src)
+		if fn then
+			local resFn = fn()
+			if type(resFn) == "function" then resFn("start", key) end
+		else
+			Notify("Error", "Failed to compile BetterSync")
+		end
 	end)
 	if success then Notify("BetterSync", "Executed BetterSync (Key: " .. string.upper(key) .. ")") else Notify("Error", "Failed to load BetterSync: " .. tostring(err)) end
 end)
 
 RegisterCommand("unbettersync", {"unbsync"}, "", "none", "Disables BetterSync", function(args)
 	local success, err = pcall(function()
-		loadstring(game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/BetterSync.luau"))("cleanup")
+		local src = game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/BetterSync.luau")
+		local fn = loadstring(src)
+		if fn then
+			local resFn = fn()
+			if type(resFn) == "function" then resFn("cleanup") end
+		end
 	end)
 	if success then Notify("BetterSync", "Disabled BetterSync") else Notify("Error", "Failed to disable BetterSync") end
 end)
@@ -850,14 +878,18 @@ end)
 
 RegisterCommand("dex", {}, "", "none", "Loads Dex Explorer", function(args)
 	local success, err = pcall(function()
-		loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua"))()
+		local src = game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua")
+		local fn = loadstring(src)
+		if fn then fn() else Notify("Error", "Failed to compile Dex") end
 	end)
 	if success then Notify("Developer", "Loaded Dex Explorer") else Notify("Error", "Failed to load Dex") end
 end)
 
 RegisterCommand("simplespy", {"rspy"}, "", "none", "Loads SimpleSpy", function(args)
 	local success, err = pcall(function()
-		loadstring(game:HttpGet("https://raw.githubusercontent.com/exxtremestuffs/SimpleSpySource/master/SimpleSpy.lua"))()
+		local src = game:HttpGet("https://raw.githubusercontent.com/exxtremestuffs/SimpleSpySource/master/SimpleSpy.lua")
+		local fn = loadstring(src)
+		if fn then fn() else Notify("Error", "Failed to compile SimpleSpy") end
 	end)
 	if success then Notify("Developer", "Loaded SimpleSpy") else Notify("Error", "Failed to load SimpleSpy") end
 end)
