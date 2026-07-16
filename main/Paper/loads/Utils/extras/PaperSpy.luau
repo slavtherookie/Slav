@@ -12,12 +12,12 @@ local ICONS = {
 	Search = "rbxassetid://98343851403074",
 	Args = "rbxassetid://131328270097325",
 	Code = "rbxassetid://120361285964665",
-	Info = "rbxassetid://82235228007110",
+	Info = "rbxassetid://81513493696931",
 	Chevron = "rbxassetid://10709790948",
 	Menu = "rbxassetid://10620959458",
 	Check = "rbxassetid://108792501004149",
 	Trash = "rbxassetid://10152135063", 
-	Export = "rbxassetid://107722760573482", 
+	Export = "rbxassetid://83856799245957", 
 	Decompile = "rbxassetid://120361285964665", 
 	Mock = "rbxassetid://75930817388973" 
 }
@@ -1083,7 +1083,6 @@ MockClearBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Advanced Search Modal --
 local isAdvSearchOpen = false
 local AdvSearchModal = Instance.new("CanvasGroup", MainPanel)
 AdvSearchModal.Size = UDim2.new(1, 0, 1, -40)
@@ -1110,7 +1109,7 @@ local AdvTitle = Instance.new("TextLabel", AdvHeader)
 AdvTitle.Size = UDim2.new(1, -60, 1, 0)
 AdvTitle.Position = UDim2.new(0, 16, 0, 0)
 AdvTitle.BackgroundTransparency = 1
-AdvTitle.Text = "Advanced Search"
+AdvTitle.Text = "A+ Search"
 AdvTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 AdvTitle.Font = Enum.Font.GothamMedium
 AdvTitle.TextSize = 14
@@ -1211,7 +1210,7 @@ CreateAdvTab("Incoming")
 CreateAdvTab("Bindables")
 CreateAdvTab("Kicks")
 
-local function RefreshAdvancedSearch()
+local function ASearch()
 	for _, child in ipairs(AdvScroll:GetChildren()) do
 		if child:IsA("Frame") then child:Destroy() end
 	end
@@ -1276,13 +1275,13 @@ for name, data in pairs(advTabButtons) do
 			TweenService:Create(d.Label, fastTween, {TextColor3 = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(120, 120, 120)}):Play()
 			if isActive then UpdateAdvHighlight(d.Btn) end
 		end
-		RefreshAdvancedSearch()
+		ASearch()
 	end)
 end
 
 AdvSearchInput:GetPropertyChangedSignal("Text"):Connect(function()
 	advSearchText = AdvSearchInput.Text
-	RefreshAdvancedSearch()
+	ASearch()
 end)
 
 AdvCloseBtn.MouseButton1Click:Connect(function()
@@ -1296,7 +1295,7 @@ AdvSearchBtn.MouseButton1Click:Connect(function()
 	if not isAdvSearchOpen then
 		isAdvSearchOpen = true
 		AdvSearchModal.Visible = true
-		RefreshAdvancedSearch()
+		ASearch()
 		ClearUnseen()
 		TweenService:Create(AdvSearchModal, smoothTween, {Position = UDim2.new(0, 0, 0, 40)}):Play()
 		task.delay(0.05, function() UpdateAdvHighlight(advTabButtons[activeAdvTab].Btn) end)
@@ -2038,7 +2037,7 @@ task.spawn(function()
 				end
 			end
 			if isAdvSearchOpen and needsAdvRefresh then
-				RefreshAdvancedSearch()
+				ASearch()
 			end
 			if Settings.VirtualScroll and needsAdvRefresh and not SettingsArea.Visible then
 				RefreshLogList(false)
@@ -2121,7 +2120,7 @@ if hookmetamethod then
 						callerPath = caller and getInstancePath(caller) or "Unknown",
 						trace = debug.traceback()
 					})
-					SpyNotify("Anti-Kick", "Blocked a kick attempt! See Advanced Search.")
+					SpyNotify("Anti-Kick", "Blocked a kick attempt! See A+ Search.")
 				end)
 				return
 			end
@@ -2219,7 +2218,7 @@ task.spawn(function()
 					hookfunction(g[2], function() return false end)
 				end
 			end
-			SpyNotify("Anti-Kick", "successful.")
+			SpyNotify("Anti-Kick", "Bypassed anti-kick via getgc successfully.")
 		end
 	end)
 end)
