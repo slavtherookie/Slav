@@ -1,13 +1,22 @@
 local args = {...}
-local keyString = args[1]
-keyString = type(keyString) == "string" and string.upper(keyString) or "G"
-local bindKey = Enum.KeyCode[keyString] or Enum.KeyCode.G
+local mode = args[1]
+local keyString = args[2]
+
+if mode == "cleanup" then
+    if _G.BetterSync_Running then
+        _G.BetterSync_Running:Cleanup()
+        _G.BetterSync_Running = nil
+    end
+    return
+end
 
 if _G.BetterSync_Running then
     _G.BetterSync_Running:Cleanup()
     _G.BetterSync_Running = nil
-    return
 end
+
+keyString = type(keyString) == "string" and string.upper(keyString) or "G"
+local bindKey = Enum.KeyCode[keyString] or Enum.KeyCode.G
 
 local Users = game:GetService("Players") 
 local Inputs = game:GetService("UserInputService") 
