@@ -1475,7 +1475,25 @@ RegisterCommand("clearsky", {"nosky"}, "", "none", "Deletes Skybox", function()
     end
 end)
 
+local originalPartProperties = {}
+
+local function cachePartProperties()
+    if not next(originalPartProperties) then
+        for _, part in pairs(Workspace:GetDescendants()) do
+            if part:IsA("BasePart") then
+                originalPartProperties[part] = {
+                    Material = part.Material,
+                    TopSurface = part.TopSurface,
+                    BottomSurface = part.BottomSurface,
+                    Transparency = part.Transparency
+                }
+            end
+        end
+    end
+end
+
 local function modMaterials(materialType)
+    cachePartProperties()
     for _, part in pairs(Workspace:GetDescendants()) do
         if part:IsA("BasePart") then
             part.Material = materialType
@@ -1492,6 +1510,7 @@ RegisterCommand("neonworld", {}, "", "none", "World to Neon", function()
 end)
 
 RegisterCommand("legoworld", {}, "", "none", "World to Studs", function()
+    cachePartProperties()
     for _, part in pairs(Workspace:GetDescendants()) do
         if part:IsA("BasePart") then
             part.TopSurface = Enum.SurfaceType.Studs
@@ -1501,6 +1520,7 @@ RegisterCommand("legoworld", {}, "", "none", "World to Studs", function()
 end)
 
 RegisterCommand("smoothworld", {}, "", "none", "World to Smooth", function()
+    cachePartProperties()
     for _, part in pairs(Workspace:GetDescendants()) do
         if part:IsA("BasePart") then
             part.TopSurface = Enum.SurfaceType.Smooth
@@ -1530,14 +1550,33 @@ RegisterCommand("forcefieldworld", {}, "", "none", "World to ForceField", functi
 end)
 
 RegisterCommand("wireframe", {}, "", "none", "World to Wireframe", function()
+    cachePartProperties()
     for _, part in pairs(Workspace:GetDescendants()) do
         if part:IsA("BasePart") then
             local wire = Instance.new("SelectionBox", part)
+            wire.Name = "PaperWireframe"
             wire.Adornee = part
             wire.LineThickness = 0.01
             part.Transparency = 1
         end
     end
+end)
+
+RegisterCommand("normalworld", {"unworld", "unwireframe"}, "", "none", "Restores the world", function()
+    if not next(originalPartProperties) then return end
+    for part, props in pairs(originalPartProperties) do
+        if part and part.Parent then
+            part.Material = props.Material
+            part.TopSurface = props.TopSurface
+            part.BottomSurface = props.BottomSurface
+            part.Transparency = props.Transparency
+            local wire = part:FindFirstChild("PaperWireframe")
+            if wire then
+                wire:Destroy()
+            end
+        end
+    end
+    originalPartProperties = {}
 end)
 
 RegisterCommand("delunanchored", {}, "", "none", "Deletes unanchored parts", function()
