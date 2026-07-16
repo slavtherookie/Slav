@@ -568,7 +568,13 @@ end
 
 local engineUrl = "https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/modulars/LuaUEngine.luau"
 local engineSource = game:HttpGet(engineUrl)
-local Baseline = loadstring(engineSource)()
+
+local engineFunc, compileError = loadstring(engineSource)
+if not engineFunc then
+	error("Failed to load LuaUEngine.luau from GitHub. The file might be incomplete or broken: " .. tostring(compileError))
+end
+
+local Baseline = engineFunc()
 local editor = Baseline.new(EditorContainer)
 
 editor.Text = " "
