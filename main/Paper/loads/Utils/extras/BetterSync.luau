@@ -1,3 +1,14 @@
+local args = {...}
+local keyString = args[1]
+keyString = type(keyString) == "string" and string.upper(keyString) or "G"
+local bindKey = Enum.KeyCode[keyString] or Enum.KeyCode.G
+
+if _G.BetterSync_Running then
+    _G.BetterSync_Running:Cleanup()
+    _G.BetterSync_Running = nil
+    return
+end
+
 local Users = game:GetService("Players") 
 local Inputs = game:GetService("UserInputService") 
 local Runtime = game:GetService("RunService")
@@ -7,7 +18,7 @@ local Client = Users.LocalPlayer
 local Handler = {} 
 Handler.__index = Handler
 
-function Handler.new() 
+function Handler.new(key) 
     local self = setmetatable({}, Handler)
 
     self.Active = false
@@ -20,6 +31,10 @@ function Handler.new()
 
     self.TickTask = nil
     self.TaskName = "DesyncTask"
+    
+    self.Key = key
+    self.InputConn = nil
+    self.CharConn = nil
 
     return self
 end
@@ -110,9 +125,22 @@ function Handler:Toggle()
     end
 end
 
-local Session = Handler.new()
+function Handler:Cleanup()
+    if self.Active then
+        self:Toggle()
+    end
+    if self.InputConn then
+        self.InputConn:Disconnect()
+    end
+    if self.CharConn then
+        self.CharConn:Disconnect()
+    end
+end
 
-Inputs.InputBegan:Connect(function(input, handled)
+local Session = Handler.new(bindKey)
+_G.BetterSync_Running = Session
+
+Session.InputConn = Inputs.InputBegan:Connect(function(input, handled)
     if Session.Active then
         local model = Client.Character
         if model then
@@ -126,12 +154,12 @@ Inputs.InputBegan:Connect(function(input, handled)
 
     if handled then return end
 
-    if input.KeyCode == Enum.KeyCode.G then
+    if input.KeyCode == Session.Key then
         Session:Toggle()
     end
 end)
 
-Client.CharacterAdded:Connect(function() 
+Session.CharConn = Client.CharacterAdded:Connect(function() 
     if Session.Active then 
         Session:Toggle() 
     end 
