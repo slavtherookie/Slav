@@ -964,8 +964,13 @@ RegisterCommand("dex", {}, "", "none", "Loads Dex", function()
     runGitScript("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua")
 end)
 
-RegisterCommand("simplespy", {"rspy"}, "", "none", "Loads Spy", function()
+RegisterCommand("simplespy", {"sspy"}, "", "none", "Loads SimpleSpy", function()
     runGitScript("https://raw.githubusercontent.com/exxtremestuffs/SimpleSpySource/master/SimpleSpy.lua")
+end)
+
+RegisterCommand("remotespy", {"paperspy", "rspy", "pspy", "spy", "ppspy"}, "", "none", "Loads PaperSpy", function()
+    Notify("Loading", "PaperSpy...")
+    runGitScript("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/PaperSpy.luau")
 end)
 
 RegisterCommand("follow", {}, "[player]", "player", "Follows player", function(args)
@@ -2239,10 +2244,8 @@ RegisterCommand("fixcam", {"uncam", "normalcam"}, "", "none", "Resets Camera", f
 end)
 
 RegisterCommand("revertall", {"unall", "resetall"}, "", "none", "Reverts all cacheable commands", function()
-    pcall(function() LocalCmdRegistry[#LocalCmdRegistry].Callback() end) -- This is a bit hacky, let's call the functions directly.
-    -- Wait, instead of calling the registry, I'll just run the logic of the normal commands.
+    pcall(function() LocalCmdRegistry[#LocalCmdRegistry].Callback() end)
     
-    -- Fix Lighting
     if originalLighting then
         Lighting.Ambient = originalLighting.Ambient
         Lighting.Brightness = originalLighting.Brightness
@@ -2251,7 +2254,6 @@ RegisterCommand("revertall", {"unall", "resetall"}, "", "none", "Reverts all cac
         Lighting.GlobalShadows = originalLighting.GlobalShadows
     end
     
-    -- Fix Char
     if LocalPlayer.Character then
         for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
             if part:IsA("BasePart") or part:IsA("Decal") then
@@ -2273,7 +2275,6 @@ RegisterCommand("revertall", {"unall", "resetall"}, "", "none", "Reverts all cac
         end
     end
     
-    -- Fix Cam
     Workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         Workspace.CurrentCamera.CameraSubject = LocalPlayer.Character.Humanoid
@@ -2286,7 +2287,6 @@ RegisterCommand("revertall", {"unall", "resetall"}, "", "none", "Reverts all cac
     LocalPlayer.CameraMode = Enum.CameraMode.Classic
     LocalPlayer.CameraMaxZoomDistance = 400
     
-    -- Fix World
     if next(originalPartProperties) then
         for part, props in pairs(originalPartProperties) do
             if part and part.Parent then
@@ -2303,7 +2303,6 @@ RegisterCommand("revertall", {"unall", "resetall"}, "", "none", "Reverts all cac
         originalPartProperties = {}
     end
     
-    -- Fix Workspace
     if originalWorkspaceProps then
         Workspace.Gravity = originalWorkspaceProps.Gravity
     end
