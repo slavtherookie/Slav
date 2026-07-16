@@ -444,7 +444,7 @@ RegisterCommand("info", {"whois", "playerinfo"}, "[player]", "player", "Displays
 	if not target then return Notify("Error", "Player not found") end
 	Notify("Info", "Loading profile for " .. target.DisplayName .. "...")
 	local success, err = pcall(function()
-		loadstring(game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/Information.luau"))()(target)
+		loadstring(game:HttpGet("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/PlayerInfo.luau"))()(target)
 	end)
 	if not success then Notify("Error", "Failed to load Information UI: " .. tostring(err)) end
 end)
