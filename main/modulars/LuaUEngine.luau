@@ -262,10 +262,6 @@ local function makeArrowButton(parent, rotation, isVertical, bgColor, imgColor, 
     btn.ZIndex = 101
     btn.Parent = parent
     btn.BackgroundTransparency = bgTrans or 0
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = strokeColor or Color3.fromRGB(33, 33, 33)
-    stroke.Transparency = strokeTrans or 0
-    stroke.Parent = btn
     local icon = Instance.new("ImageLabel")
     icon.AnchorPoint = Vector2.new(0.5, 0.5)
     icon.Size = UDim2.new(0, 12, 0, 12)
@@ -310,10 +306,6 @@ function ScrollBar.new(container, isVertical)
     self.BarFrame.Parent = container
     self.BarFrame.Visible = false
     self.BarFrame.BackgroundTransparency = self.TrackTransparency
-    local barStroke = Instance.new("UIStroke")
-    barStroke.Color = strokeColor
-    barStroke.Transparency = strokeTrans
-    barStroke.Parent = self.BarFrame
     self.UpBtn, self.UpIcon = makeArrowButton(self.BarFrame, isVertical and 180 or 90, isVertical, self.TrackColor, imageColor, self.TrackTransparency, strokeColor, strokeTrans)
     self.UpBtn.AnchorPoint = Vector2.new(0, 0)
     self.UpBtn.Position = UDim2.new(0, 0, 0, 0)
@@ -485,11 +477,6 @@ function Baseline.new(canvasGroup)
         newFrame.LayoutOrder = canvasGroup.LayoutOrder
         newFrame.ClipsDescendants = true
         newFrame.Parent = canvasGroup.Parent
-        local editorStroke = Instance.new("UIStroke")
-        editorStroke.Color = canvasGroup:GetAttribute("StrokeColor3") or Color3.fromRGB(255, 255, 255)
-        editorStroke.Transparency = canvasGroup:GetAttribute("StrokeTransparency") or 0.85
-        editorStroke.Thickness = canvasGroup:GetAttribute("StrokeThickness") or 1
-        editorStroke.Parent = newFrame
         for k, v in pairs(canvasGroup:GetAttributes()) do
             newFrame:SetAttribute(k, v)
         end
@@ -545,7 +532,7 @@ function Baseline.new(canvasGroup)
     self.AutocompleteVisible = false
     self.AutocompleteMatches = {}
     self.AutocompleteIndex = 1
-    self.AutocompleteSelectionColor = Color3.fromRGB(11, 90, 175)
+    self.AutocompleteSelectionColor = Color3.fromRGB(37, 75, 122)
     
     table.insert(Baseline.Instances, self)
     
@@ -557,11 +544,6 @@ function Baseline.new(canvasGroup)
     self.CurrentLineHighlight.ZIndex = 1
     self.CurrentLineHighlight.Visible = false
     self.CurrentLineHighlight.Parent = canvasGroup
-    local highlightStroke = Instance.new("UIStroke")
-    highlightStroke.Color = Color3.fromRGB(255, 255, 255)
-    highlightStroke.Transparency = 0.85
-    highlightStroke.Thickness = 1
-    highlightStroke.Parent = self.CurrentLineHighlight
     
     self.LineNumbersContainer = Instance.new("Frame")
     self.LineNumbersContainer.Name = "BaselineLineNumbersContainer"
@@ -620,6 +602,17 @@ function Baseline.new(canvasGroup)
     self.PlaceholderLabel.TextYAlignment = Enum.TextYAlignment.Top
     self.PlaceholderLabel.ZIndex = 1
     self.PlaceholderLabel.Parent = self.InnerFrame
+
+    self.GhostTextLabel = Instance.new("TextLabel")
+    self.GhostTextLabel.Name = "GhostTextLabel"
+    self.GhostTextLabel.Size = UDim2.new(0, 10000, 0, 25)
+    self.GhostTextLabel.BackgroundTransparency = 1
+    self.GhostTextLabel.TextColor3 = Color3.fromRGB(130, 130, 130)
+    self.GhostTextLabel.TextXAlignment = Enum.TextXAlignment.Left
+    self.GhostTextLabel.TextYAlignment = Enum.TextYAlignment.Top
+    self.GhostTextLabel.ZIndex = 3
+    self.GhostTextLabel.Visible = false
+    self.GhostTextLabel.Parent = self.InnerFrame
     
     self.HighlightContainer = Instance.new("Frame")
     self.HighlightContainer.Name = "BaselineHighlightContainer"
@@ -652,9 +645,8 @@ function Baseline.new(canvasGroup)
     self.AutocompleteUI = Instance.new("Frame")
     self.AutocompleteUI.Name = "AutocompleteUI"
     self.AutocompleteUI.Size = UDim2.new(0, 260, 0, 160)
-    self.AutocompleteUI.BackgroundColor3 = Color3.fromRGB(37, 37, 38)
-    self.AutocompleteUI.BorderColor3 = Color3.fromRGB(60, 60, 60)
-    self.AutocompleteUI.BorderSizePixel = 1
+    self.AutocompleteUI.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    self.AutocompleteUI.BorderSizePixel = 0
     self.AutocompleteUI.ZIndex = 100
     self.AutocompleteUI.Visible = false
     self.AutocompleteUI.Parent = self.CanvasGroup
@@ -675,8 +667,7 @@ function Baseline.new(canvasGroup)
     self.AutocompleteHint = Instance.new("Frame")
     self.AutocompleteHint.Name = "AutocompleteHint"
     self.AutocompleteHint.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    self.AutocompleteHint.BorderSizePixel = 1
-    self.AutocompleteHint.BorderColor3 = Color3.fromRGB(60, 60, 60)
+    self.AutocompleteHint.BorderSizePixel = 0
     self.AutocompleteHint.Visible = false
     self.AutocompleteHint.ZIndex = 101
     self.AutocompleteHint.Parent = self.AutocompleteUI
@@ -792,6 +783,10 @@ function Baseline.new(canvasGroup)
         elseif input.UserInputType == Enum.UserInputType.Keyboard then
             if not self.IsFocused then return end
             if self.AutocompleteVisible then
+                local text = self.CanvasGroup:GetAttribute("Text") or ""
+                local word = Utils.getWordBeforeCursor(text, self.CursorIndex)
+                local match = self.AutocompleteMatches[self.AutocompleteIndex]
+                
                 if input.KeyCode == Enum.KeyCode.Down then
                     self.AutocompleteIndex = math.min(self.AutocompleteIndex + 1, #self.AutocompleteMatches)
                     self:RenderAutocomplete()
@@ -800,8 +795,18 @@ function Baseline.new(canvasGroup)
                     self.AutocompleteIndex = math.max(self.AutocompleteIndex - 1, 1)
                     self:RenderAutocomplete()
                     return
-                elseif input.KeyCode == Enum.KeyCode.Tab or input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter then
+                elseif input.KeyCode == Enum.KeyCode.Right then
+                    if self.GhostTextLabel.Visible then
+                        if self:CommitAutocomplete() then return end
+                    end
+                elseif input.KeyCode == Enum.KeyCode.Tab then
                     if self:CommitAutocomplete() then return end
+                elseif input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter then
+                    if match and match.word == word then
+                        self:HideAutocomplete()
+                    else
+                        if self:CommitAutocomplete() then return end
+                    end
                 elseif input.KeyCode == Enum.KeyCode.Escape then
                     self:HideAutocomplete()
                     return
@@ -992,7 +997,7 @@ function Baseline:ApplyThemeRules(rules)
         if rules["AutocompleteSelection"] and rules["AutocompleteSelection"].color then
             self.AutocompleteSelectionColor = rules["AutocompleteSelection"].color
         else
-            self.AutocompleteSelectionColor = Color3.fromRGB(11, 90, 175)
+            self.AutocompleteSelectionColor = Color3.fromRGB(37, 75, 122)
         end
         local scrollBg = rules["ScriptEditorScrollbarBackground"] and rules["ScriptEditorScrollbarBackground"].color
         local scrollHandle = rules["ScriptEditorScrollbarHandle"] and rules["ScriptEditorScrollbarHandle"].color
@@ -1032,11 +1037,10 @@ function Baseline:OpenFindUI()
     local function createFindMenu()
         local mainFrame = Instance.new("Frame")
         mainFrame.Name = "MainFrame"
-        mainFrame.Size = UDim2.new(0, 300, 0, 88)
-        mainFrame.Position = UDim2.new(0.5, -150, 0.3, 0)
-        mainFrame.BackgroundColor3 = Color3.fromRGB(37, 37, 38)
-        mainFrame.BorderColor3 = Color3.fromRGB(45, 45, 45)
-        mainFrame.BorderSizePixel = 1
+        mainFrame.Size = UDim2.new(0, 260, 0, 88)
+        mainFrame.Position = UDim2.new(0.5, -130, 0.3, 0)
+        mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        mainFrame.BorderSizePixel = 0
         mainFrame.ZIndex = 1
         mainFrame.AnchorPoint = Vector2.new(0, 0)
         
@@ -1080,9 +1084,9 @@ function Baseline:OpenFindUI()
         
         local findBox = Instance.new("TextBox")
         findBox.Name = "FindBox"
-        findBox.Size = UDim2.new(0, 195, 1, 0)
+        findBox.Size = UDim2.new(0, 155, 1, 0)
         findBox.Position = UDim2.new(0, 24, 0, 0)
-        findBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        findBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
         findBox.TextColor3 = Color3.fromRGB(204, 204, 204)
         findBox.BorderSizePixel = 0
         findBox.TextSize = 14
@@ -1101,7 +1105,7 @@ function Baseline:OpenFindUI()
         local findPrevBtn = Instance.new("ImageButton")
         findPrevBtn.Name = "FindPrevBtn"
         findPrevBtn.Size = UDim2.new(0, 20, 0, 20)
-        findPrevBtn.Position = UDim2.new(0, 225, 0, 2)
+        findPrevBtn.Position = UDim2.new(0, 185, 0, 2)
         findPrevBtn.BackgroundTransparency = 1
         findPrevBtn.Image = "rbxassetid://123393842142851"
         findPrevBtn.Parent = row1Find
@@ -1109,7 +1113,7 @@ function Baseline:OpenFindUI()
         local findNextBtn = Instance.new("ImageButton")
         findNextBtn.Name = "FindNextBtn"
         findNextBtn.Size = UDim2.new(0, 20, 0, 20)
-        findNextBtn.Position = UDim2.new(0, 249, 0, 2)
+        findNextBtn.Position = UDim2.new(0, 209, 0, 2)
         findNextBtn.BackgroundTransparency = 1
         findNextBtn.Image = "rbxassetid://71631858247362"
         findNextBtn.Parent = row1Find
@@ -1117,7 +1121,7 @@ function Baseline:OpenFindUI()
         local closeBtn = Instance.new("ImageButton")
         closeBtn.Name = "CloseBtn"
         closeBtn.Size = UDim2.new(0, 20, 0, 20)
-        closeBtn.Position = UDim2.new(0, 281, 0, 2)
+        closeBtn.Position = UDim2.new(0, 241, 0, 2)
         closeBtn.BackgroundTransparency = 1
         closeBtn.Image = "rbxassetid://80750399461762"
         closeBtn.Parent = row1Find
@@ -1131,9 +1135,9 @@ function Baseline:OpenFindUI()
         
         local replaceBox = Instance.new("TextBox")
         replaceBox.Name = "ReplaceBox"
-        replaceBox.Size = UDim2.new(0, 195, 1, 0)
+        replaceBox.Size = UDim2.new(0, 155, 1, 0)
         replaceBox.Position = UDim2.new(0, 24, 0, 0)
-        replaceBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        replaceBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
         replaceBox.TextColor3 = Color3.fromRGB(204, 204, 204)
         replaceBox.BorderSizePixel = 0
         replaceBox.TextSize = 14
@@ -1152,14 +1156,14 @@ function Baseline:OpenFindUI()
         local replaceNextBtn = Instance.new("ImageButton")
         replaceNextBtn.Name = "ReplaceNextBtn"
         replaceNextBtn.Size = UDim2.new(0, 20, 0, 20)
-        replaceNextBtn.Position = UDim2.new(0, 225, 0, 2)
+        replaceNextBtn.Position = UDim2.new(0, 185, 0, 2)
         replaceNextBtn.BackgroundTransparency = 1
         replaceNextBtn.Parent = row2Replace
         
         local replaceAllBtn = Instance.new("ImageButton")
         replaceAllBtn.Name = "ReplaceAllBtn"
         replaceAllBtn.Size = UDim2.new(0, 20, 0, 20)
-        replaceAllBtn.Position = UDim2.new(0, 249, 0, 2)
+        replaceAllBtn.Position = UDim2.new(0, 209, 0, 2)
         replaceAllBtn.BackgroundTransparency = 1
         replaceAllBtn.Parent = row2Replace
         
@@ -1232,7 +1236,7 @@ function Baseline:OpenFindUI()
     
     if row2 then row2.Visible = false end
     if row3 then row3.Position = UDim2.new(0, 0, 0, 28) end
-    findUI.Size = UDim2.new(0, 300, 0, 62)
+    findUI.Size = UDim2.new(0, 260, 0, 62)
     
     local function addHoverEffect(button)
         local hoverFrame = Instance.new("Frame")
@@ -1339,12 +1343,14 @@ function Baseline:OpenFindUI()
                 if iconTopChevron then iconTopChevron.Rotation = isMenuExpanded and 180 or 0 end
                 if iconBottomChevron then iconBottomChevron.Rotation = isMenuExpanded and 180 or 0 end
                 if row2 then row2.Visible = isMenuExpanded end
+                local currentWidthVal = math.min(260, self.CanvasGroup.AbsoluteSize.X - 16)
+                if currentWidthVal < 180 then currentWidthVal = 180 end
                 if isMenuExpanded then
                     if row3 then row3.Position = UDim2.new(0, 0, 0, 56) end
-                    findUI.Size = UDim2.new(0, 300, 0, 88)
+                    findUI.Size = UDim2.new(0, currentWidthVal, 0, 88)
                 else
                     if row3 then row3.Position = UDim2.new(0, 0, 0, 28) end
-                    findUI.Size = UDim2.new(0, 300, 0, 62)
+                    findUI.Size = UDim2.new(0, currentWidthVal, 0, 62)
                 end
             end)
         end
@@ -1421,6 +1427,14 @@ function Baseline:OpenFindUI()
         local btnUseRegex = row3:FindFirstChild("UseRegexBtn")
         if btnUseRegex then addHoverEffect(btnUseRegex) end
     end
+
+    self.FindResizeConn = self.CanvasGroup:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        if not self.FindUI then return end
+        local updatedWidth = math.min(260, self.CanvasGroup.AbsoluteSize.X - 16)
+        if updatedWidth < 180 then updatedWidth = 180 end
+        local currentMenuHeight = self.FindUI.Size.Y.Offset
+        self.FindUI.Size = UDim2.new(0, updatedWidth, 0, currentMenuHeight)
+    end)
 end
 
 function Baseline:CloseFindUI()
@@ -1431,6 +1445,10 @@ function Baseline:CloseFindUI()
     if self.FindTextConn then
         self.FindTextConn:Disconnect()
         self.FindTextConn = nil
+    end
+    if self.FindResizeConn then
+        self.FindResizeConn:Disconnect()
+        self.FindResizeConn = nil
     end
     self.FindMatches = {}
     self.CurrentMatchIndex = 0
@@ -1873,6 +1891,7 @@ function Baseline:HideAutocomplete()
     self.AutocompleteVisible = false
     self.AutocompleteUI.Visible = false
     self.AutocompleteHint.Visible = false
+    self.GhostTextLabel.Visible = false
     self.AutocompleteMatches = {}
     self.AutocompleteIndex = 1
 end
@@ -1888,7 +1907,7 @@ function Baseline:RenderAutocomplete()
         local isSelected = (i == self.AutocompleteIndex)
         local rowFrame = Instance.new("Frame")
         rowFrame.Size = UDim2.new(1, 0, 0, 22)
-        rowFrame.BackgroundColor3 = isSelected and self.AutocompleteSelectionColor or Color3.fromRGB(37, 37, 38)
+        rowFrame.BackgroundColor3 = isSelected and self.AutocompleteSelectionColor or Color3.fromRGB(30, 30, 30)
         rowFrame.BorderSizePixel = 0
         rowFrame.Parent = self.AutocompleteScroll
         local btn = Instance.new("TextButton")
@@ -1947,29 +1966,58 @@ function Baseline:CommitAutocomplete()
 end
 
 function Baseline:UpdateAutocompleteUI()
-    if not self.IsFocused then
+    if not self.IsFocused or self.SelectionStart ~= self.CursorIndex then
         self:HideAutocomplete()
         return
     end
+    
     local text = self.CanvasGroup:GetAttribute("Text") or ""
     local word = Utils.getWordBeforeCursor(text, self.CursorIndex)
+    
     if #word < 1 then
         self:HideAutocomplete()
         return
     end
+    
+    local dynamicMatches = {}
+    for varName in text:gmatch("local%s+([%w_]+)") do
+        dynamicMatches[varName] = "Variable"
+    end
+    for funcName in text:gmatch("function%s+([%w_]+)") do
+        dynamicMatches[funcName] = "Function"
+    end
+    for varName in text:gmatch("([%w_]+)%s*=") do
+        if not dynamicMatches[varName] then
+            dynamicMatches[varName] = "Variable"
+        end
+    end
+    
     local matches = {}
     local wordLower = word:lower()
-    for _, item in ipairs(Utils.AutocompleteKeywords) do
-        local kw = item.word
-        if kw:lower():sub(1, #wordLower) == wordLower then
-            table.insert(matches, item)
+    local added = {}
+    
+    local function addMatch(mWord, mType, mIcon)
+        if added[mWord] then return end
+        if mWord:lower():sub(1, #wordLower) == wordLower then
+            table.insert(matches, {word = mWord, type = mType, icon = mIcon})
+            added[mWord] = true
         end
+    end
+    
+    for dWord, dType in pairs(dynamicMatches) do
+        addMatch(dWord, dType, "rbxassetid://0")
+    end
+    
+    for _, item in ipairs(Utils.AutocompleteKeywords) do
+        addMatch(item.word, item.type, item.icon)
         if #matches >= 50 then break end
     end
+    
     if #matches == 0 then
         self:HideAutocomplete()
         return
     end
+    
     self.AutocompleteMatches = matches
     self.AutocompleteIndex = math.clamp(self.AutocompleteIndex, 1, #matches)
     self:RenderAutocomplete()
@@ -1986,6 +2034,38 @@ function Baseline:ProcessKey(keyCode, isShiftDown, isCtrlDown)
         end
     end
     local displayedText = self:GetDisplayText()
+    
+    if self.AutocompleteVisible then
+        local text = self.CanvasGroup:GetAttribute("Text") or ""
+        local word = Utils.getWordBeforeCursor(text, self.CursorIndex)
+        local match = self.AutocompleteMatches[self.AutocompleteIndex]
+        
+        if keyCode == Enum.KeyCode.Down then
+            self.AutocompleteIndex = math.min(self.AutocompleteIndex + 1, #self.AutocompleteMatches)
+            self:RenderAutocomplete()
+            return
+        elseif keyCode == Enum.KeyCode.Up then
+            self.AutocompleteIndex = math.max(self.AutocompleteIndex - 1, 1)
+            self:RenderAutocomplete()
+            return
+        elseif keyCode == Enum.KeyCode.Right then
+            if self.GhostTextLabel.Visible then
+                if self:CommitAutocomplete() then return end
+            end
+        elseif keyCode == Enum.KeyCode.Tab then
+            if self:CommitAutocomplete() then return end
+        elseif keyCode == Enum.KeyCode.Return or keyCode == Enum.KeyCode.KeypadEnter then
+            if match and match.word == word then
+                self:HideAutocomplete()
+            else
+                if self:CommitAutocomplete() then return end
+            end
+        elseif keyCode == Enum.KeyCode.Escape then
+            self:HideAutocomplete()
+            return
+        end
+    end
+    
     if keyCode == Enum.KeyCode.Tab then
         if self.CanvasGroup:GetAttribute("MultiLine") then
             if isShiftDown then
@@ -2500,6 +2580,10 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
     self.PlaceholderLabel.TextSize = editorTextSize
     self.PlaceholderLabel.Font = editorFont
     self.PlaceholderLabel.Visible = rawEditorText == ""
+    
+    self.GhostTextLabel.TextSize = editorTextSize
+    self.GhostTextLabel.Font = editorFont
+    
     local lineNumbersMarginWidth = 0
     if hasLineNumbers then
         local lineCountEstimate = 1
@@ -2937,9 +3021,24 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
             local rowRelativeY = (self.AutocompleteIndex - 1) * 22 - self.AutocompleteScroll.CanvasPosition.Y
             self.AutocompleteHint.Position = UDim2.new(1, 1, 0, rowRelativeY)
             self.AutocompleteHint.Visible = true
+            
+            local currentWord = Utils.getWordBeforeCursor(displayedText, self.CursorIndex)
+            local afterChar = displayedText:sub(self.CursorIndex + 1, self.CursorIndex + 1)
+            
+            if currentWord ~= "" and match.word:lower():sub(1, #currentWord) == currentWord:lower() and #match.word > #currentWord and (afterChar == "" or afterChar:match("[%s%p]")) then
+                local ghostString = match.word:sub(#currentWord + 1)
+                self.GhostTextLabel.Text = ghostString
+                self.GhostTextLabel.Position = UDim2.new(0, 4 + currentCursorX, 0, 4 + currentCursorY)
+                self.GhostTextLabel.Visible = true
+            else
+                self.GhostTextLabel.Visible = false
+            end
+        else
+            self.GhostTextLabel.Visible = false
         end
     else
         self.AutocompleteHint.Visible = false
+        self.GhostTextLabel.Visible = false
     end
 end
 
