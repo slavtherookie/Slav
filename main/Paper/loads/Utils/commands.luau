@@ -226,13 +226,8 @@ RunService.RenderStepped:Connect(function(dt)
     cam.CFrame = CFrame.new(cam.CFrame.Position + fcVelocity * dt) * rotationCFrame
 end)
 
-RegisterCommand("expand", {"open", "ui"}, "", "none", "Expands the UI", function()
-    SetUIExpanded(true)
-end)
-
-RegisterCommand("minimize", {"close", "shrink"}, "", "none", "Minimizes the UI", function()
-    SetUIExpanded(false)
-end)
+RegisterCommand("expand", {"open", "ui"}, "", "none", "Expands the UI", function() SetUIExpanded(true) end)
+RegisterCommand("minimize", {"close", "shrink"}, "", "none", "Minimizes the UI", function() SetUIExpanded(false) end)
 
 RegisterCommand("rejoin", {"rj"}, "", "none", "Rejoins current server", function()
     Notify("Server", "Rejoining...")
@@ -275,9 +270,7 @@ RegisterCommand("unlocate", {"unesp"}, "", "none", "Removes locates", function()
         table.insert(toRemove, e)
         count = count + 1
     end
-    for _, e in ipairs(toRemove) do
-        pcall(e.Cleanup)
-    end
+    for _, e in ipairs(toRemove) do pcall(e.Cleanup) end
     activeESPs = {}
     Notify("Locate", "Removed " .. count .. " trackers")
 end)
@@ -333,25 +326,13 @@ RegisterCommand("unfly", {"nofly"}, "", "none", "Disables flight", function()
 end)
 
 RegisterCommand("clip", {"c"}, "", "none", "Disables noclip", function()
-    if _G.PaperNoclip then
-        _G.PaperNoclip:Disconnect()
-        _G.PaperNoclip = nil
-    end
+    if _G.PaperNoclip then _G.PaperNoclip:Disconnect(); _G.PaperNoclip = nil end
     Notify("Movement", "Noclip Disabled")
 end)
 
-RegisterCommand("freecam", {"fc"}, "", "none", "Toggles freecam", function()
-    toggleFreecam()
-end)
-
-RegisterCommand("disablenotifs", {"nonotifs"}, "", "none", "Hides notifs", function()
-    SetNotifsEnabled(false)
-end)
-
-RegisterCommand("enablenotifs", {}, "", "none", "Shows notifs", function()
-    SetNotifsEnabled(true)
-    Notify("Settings", "Notifs Enabled")
-end)
+RegisterCommand("freecam", {"fc"}, "", "none", "Toggles freecam", function() toggleFreecam() end)
+RegisterCommand("disablenotifs", {"nonotifs"}, "", "none", "Hides notifs", function() SetNotifsEnabled(false) end)
+RegisterCommand("enablenotifs", {}, "", "none", "Shows notifs", function() SetNotifsEnabled(true); Notify("Settings", "Notifs Enabled") end)
 
 RegisterCommand("spectate", {"view"}, "[player]", "player", "Spectates", function(args)
     local target = GetPlayer(args[2])
@@ -385,20 +366,13 @@ end)
 RegisterCommand("gravity", {"grav"}, "[num]", "none", "Sets gravity", function(args)
     cacheWorkspace()
     local amount = tonumber(args[2])
-    if amount then
-        Workspace.Gravity = amount
-    end
+    if amount then Workspace.Gravity = amount end
 end)
 
-RegisterCommand("resetgravity", {"rgrav"}, "", "none", "Resets gravity", function()
-    Workspace.Gravity = 196.2
-end)
+RegisterCommand("resetgravity", {"rgrav"}, "", "none", "Resets gravity", function() Workspace.Gravity = 196.2 end)
 
 RegisterCommand("noclicktp", {"unctp"}, "", "none", "Disables ClickTP", function()
-    if clickTpConn then
-        clickTpConn:Disconnect()
-        clickTpConn = nil
-    end
+    if clickTpConn then clickTpConn:Disconnect(); clickTpConn = nil end
 end)
 
 RegisterCommand("copypos", {"cpos"}, "", "none", "Copies pos", function()
@@ -429,15 +403,11 @@ RegisterCommand("loadpos", {"lp"}, "", "none", "Loads position", function()
 end)
 
 RegisterCommand("freeze", {"anchor"}, "", "none", "Anchors character", function()
-    if getRoot(LocalPlayer.Character) then
-        getRoot(LocalPlayer.Character).Anchored = true
-    end
+    if getRoot(LocalPlayer.Character) then getRoot(LocalPlayer.Character).Anchored = true end
 end)
 
 RegisterCommand("unfreeze", {"unanchor"}, "", "none", "Unanchors character", function()
-    if getRoot(LocalPlayer.Character) then
-        getRoot(LocalPlayer.Character).Anchored = false
-    end
+    if getRoot(LocalPlayer.Character) then getRoot(LocalPlayer.Character).Anchored = false end
 end)
 
 RegisterCommand("health", {"hp"}, "[num]", "none", "Sets local HP", function(args)
@@ -463,15 +433,11 @@ RegisterCommand("heal", {}, "", "none", "Heals locally", function()
 end)
 
 RegisterCommand("copyplaceid", {"cpid"}, "", "none", "Copies place ID", function()
-    if setclipboard then
-        setclipboard(tostring(game.PlaceId))
-    end
+    if setclipboard then setclipboard(tostring(game.PlaceId)) end
 end)
 
 RegisterCommand("copyuserid", {"cuid"}, "", "none", "Copies user ID", function()
-    if setclipboard then
-        setclipboard(tostring(LocalPlayer.UserId))
-    end
+    if setclipboard then setclipboard(tostring(LocalPlayer.UserId)) end
 end)
 
 RegisterCommand("serverinfo", {"sinfo"}, "", "none", "Shows server stats", function()
@@ -495,10 +461,7 @@ RegisterCommand("hipheight", {"hh"}, "[num]", "none", "Adjusts hipheight", funct
 end)
 
 RegisterCommand("visible", {"vis"}, "", "none", "Makes visible", function()
-    if invisibleConn then
-        invisibleConn:Disconnect()
-        invisibleConn = nil
-    end
+    if invisibleConn then invisibleConn:Disconnect(); invisibleConn = nil end
     if LocalPlayer.Character then
         for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
             if part:IsA("BasePart") or part:IsA("Decal") then
@@ -509,17 +472,11 @@ RegisterCommand("visible", {"vis"}, "", "none", "Makes visible", function()
 end)
 
 RegisterCommand("unspin", {}, "", "none", "Stops spin", function()
-    if spinConn then
-        spinConn:Disconnect()
-        spinConn = nil
-    end
+    if spinConn then spinConn:Disconnect(); spinConn = nil end
 end)
 
 RegisterCommand("unfloat", {}, "", "none", "Stops float", function()
-    if floatPart then
-        pcall(function() floatPart:Destroy() end)
-        floatPart = nil
-    end
+    if floatPart then pcall(function() floatPart:Destroy() end); floatPart = nil end
 end)
 
 RegisterCommand("stun", {"ragdoll"}, "", "none", "Stuns character", function()
@@ -537,20 +494,15 @@ end)
 RegisterCommand("zoom", {}, "[num]", "none", "Sets MaxZoom", function(args)
     cacheCamera()
     local amount = tonumber(args[2])
-    if amount then
-        LocalPlayer.CameraMaxZoomDistance = amount
-    end
+    if amount then LocalPlayer.CameraMaxZoomDistance = amount end
 end)
 
 RegisterCommand("firstperson", {"fp"}, "", "none", "Forces FP", function()
-    cacheCamera()
-    LocalPlayer.CameraMode = Enum.CameraMode.LockFirstPerson
+    cacheCamera(); LocalPlayer.CameraMode = Enum.CameraMode.LockFirstPerson
 end)
 
 RegisterCommand("thirdperson", {"tp"}, "", "none", "Unlocks TP", function()
-    cacheCamera()
-    LocalPlayer.CameraMode = Enum.CameraMode.Classic
-    LocalPlayer.CameraMaxZoomDistance = 400
+    cacheCamera(); LocalPlayer.CameraMode = Enum.CameraMode.Classic; LocalPlayer.CameraMaxZoomDistance = 400
 end)
 
 RegisterCommand("bringcamera", {"bcam"}, "", "none", "TPs to camera", function()
@@ -571,40 +523,31 @@ end)
 RegisterCommand("brightness", {}, "[num]", "none", "Sets brightness", function(args)
     cacheLighting()
     local amount = tonumber(args[2])
-    if amount then
-        Lighting.Brightness = amount
-    end
+    if amount then Lighting.Brightness = amount end
 end)
 
 RegisterCommand("clocktime", {"time"}, "[num]", "none", "Sets time", function(args)
     cacheLighting()
     local amount = tonumber(args[2])
-    if amount then
-        Lighting.ClockTime = amount
-    end
+    if amount then Lighting.ClockTime = amount end
 end)
 
 RegisterCommand("nofog", {}, "", "none", "Removes fog", function()
-    cacheLighting()
-    Lighting.FogEnd = 100000
+    cacheLighting(); Lighting.FogEnd = 100000
 end)
 
 RegisterCommand("shadows", {}, "", "none", "Enables shadows", function()
-    cacheLighting()
-    Lighting.GlobalShadows = true
+    cacheLighting(); Lighting.GlobalShadows = true
 end)
 
 RegisterCommand("noshadows", {}, "", "none", "Disables shadows", function()
-    cacheLighting()
-    Lighting.GlobalShadows = false
+    cacheLighting(); Lighting.GlobalShadows = false
 end)
 
 RegisterCommand("ping", {}, "", "none", "Displays ping", function()
     pcall(function()
         local ping = tonumber(string.match(Stats.Network.ServerStatsItem["Data Ping"]:GetValueString(), "%d+"))
-        if ping then
-            Notify("Utility", "Ping: " .. ping .. "ms")
-        end
+        if ping then Notify("Utility", "Ping: " .. ping .. "ms") end
     end)
 end)
 
@@ -616,22 +559,15 @@ RegisterCommand("velocity", {"vel"}, "[x] [y] [z]", "none", "Sets Velocity", fun
     local x = tonumber(args[2]) or 0
     local y = tonumber(args[3]) or 0
     local z = tonumber(args[4]) or 0
-    if getRoot(LocalPlayer.Character) then
-        getRoot(LocalPlayer.Character).AssemblyLinearVelocity = Vector3.new(x, y, z)
-    end
+    if getRoot(LocalPlayer.Character) then getRoot(LocalPlayer.Character).AssemblyLinearVelocity = Vector3.new(x, y, z) end
 end)
 
 RegisterCommand("rocket", {}, "", "none", "Shoots you up", function()
-    if getRoot(LocalPlayer.Character) then
-        getRoot(LocalPlayer.Character).AssemblyLinearVelocity = Vector3.new(0, 1000, 0)
-    end
+    if getRoot(LocalPlayer.Character) then getRoot(LocalPlayer.Character).AssemblyLinearVelocity = Vector3.new(0, 1000, 0) end
 end)
 
 RegisterCommand("unbhop", {"nobhop"}, "", "none", "Disables bhop", function()
-    if bhopConn then
-        bhopConn:Disconnect()
-        bhopConn = nil
-    end
+    if bhopConn then bhopConn:Disconnect(); bhopConn = nil end
 end)
 
 RegisterCommand("dash", {}, "", "none", "Pushes you forward", function()
@@ -658,13 +594,9 @@ RegisterCommand("locate", {"esp"}, "[player] [tracer?]", "player", "Creates ESP"
     if not target or target == LocalPlayer then return end
     
     local wantsTracer = false
-    if args[3] and string.lower(tostring(args[3])):match("t") then
-        wantsTracer = true
-    end
+    if args[3] and string.lower(tostring(args[3])):match("t") then wantsTracer = true end
     
-    if activeESPs[target] then
-        pcall(activeESPs[target].Cleanup)
-    end
+    if activeESPs[target] then pcall(activeESPs[target].Cleanup) end
     
     local espData = {}
     local billboard = Instance.new("BillboardGui", TargetGui)
@@ -717,12 +649,8 @@ RegisterCommand("locate", {"esp"}, "[player] [tracer?]", "player", "Creates ESP"
                 tracerLine.Size = UDim2.new(0, (to - from).Magnitude, 0, 1)
                 tracerLine.Position = UDim2.new(0, (from.X + to.X) / 2, 0, (from.Y + to.Y) / 2)
                 tracerLine.Rotation = math.deg(math.atan2(to.Y - from.Y, to.X - from.X))
-            else
-                tracerLine.Visible = false
-            end
-        else
-            tracerLine.Visible = false
-        end
+            else tracerLine.Visible = false end
+        else tracerLine.Visible = false end
     end)
     activeESPs[target] = espData
     Notify("Locate", "Tracking " .. target.Name)
@@ -734,9 +662,7 @@ RegisterCommand("fly", {"flight"}, "", "none", "Enables flight", function()
     if flyGyro then pcall(function() flyGyro:Destroy() end) end
     local char = LocalPlayer.Character
     if char and getRoot(char) and char:FindFirstChild("Humanoid") then
-        for _, track in ipairs(char.Humanoid:GetPlayingAnimationTracks()) do
-            track:Stop()
-        end
+        for _, track in ipairs(char.Humanoid:GetPlayingAnimationTracks()) do track:Stop() end
         flyPart = Instance.new("BodyVelocity", getRoot(char))
         flyPart.MaxForce = Vector3.new(9e9, 9e9, 9e9)
         flyGyro = Instance.new("BodyGyro", getRoot(char))
@@ -753,27 +679,19 @@ RegisterCommand("fly", {"flight"}, "", "none", "Enables flight", function()
             if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
             if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0, 1, 0) end
             if moveDir.Magnitude > 0 then moveDir = moveDir.Unit end
-            if flyPart and flyPart.Parent then
-                flyPart.Velocity = moveDir * 50
-            end
-            if flyGyro and flyGyro.Parent then
-                flyGyro.CFrame = cam.CFrame
-            end
+            if flyPart and flyPart.Parent then flyPart.Velocity = moveDir * 50 end
+            if flyGyro and flyGyro.Parent then flyGyro.CFrame = cam.CFrame end
         end)
         Notify("Flight", "Fly enabled")
     end
 end)
 
 RegisterCommand("noclip", {"nc"}, "", "none", "Go through walls", function()
-    if _G.PaperNoclip then
-        _G.PaperNoclip:Disconnect()
-    end
+    if _G.PaperNoclip then _G.PaperNoclip:Disconnect() end
     _G.PaperNoclip = RunService.Stepped:Connect(function()
         if LocalPlayer.Character then
             for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
+                if part:IsA("BasePart") then part.CanCollide = false end
             end
         end
     end)
@@ -783,19 +701,13 @@ end)
 RegisterCommand("fullbright", {"fb"}, "", "none", "Maxes lighting", function()
     if not isFullbright then
         oldLighting = {
-            Ambient = Lighting.Ambient,
-            Brightness = Lighting.Brightness,
-            ClockTime = Lighting.ClockTime,
-            FogEnd = Lighting.FogEnd,
-            GlobalShadows = Lighting.GlobalShadows
+            Ambient = Lighting.Ambient, Brightness = Lighting.Brightness,
+            ClockTime = Lighting.ClockTime, FogEnd = Lighting.FogEnd, GlobalShadows = Lighting.GlobalShadows
         }
         isFullbright = true
         fbConn = RunService.RenderStepped:Connect(function()
-            Lighting.Ambient = Color3.new(1, 1, 1)
-            Lighting.Brightness = 2
-            Lighting.ClockTime = 14
-            Lighting.FogEnd = 100000
-            Lighting.GlobalShadows = false
+            Lighting.Ambient = Color3.new(1, 1, 1); Lighting.Brightness = 2
+            Lighting.ClockTime = 14; Lighting.FogEnd = 100000; Lighting.GlobalShadows = false
         end)
         Notify("Graphics", "Fullbright Enabled")
     end
@@ -816,9 +728,7 @@ RegisterCommand("invisible", {"invis"}, "", "none", "Makes locally invisible", f
     invisibleConn = RunService.RenderStepped:Connect(function()
         if LocalPlayer.Character then
             for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-                if part:IsA("BasePart") or part:IsA("Decal") then
-                    part.LocalTransparencyModifier = 1
-                end
+                if part:IsA("BasePart") or part:IsA("Decal") then part.LocalTransparencyModifier = 1 end
             end
         end
     end)
@@ -890,14 +800,6 @@ RegisterCommand("unbettersync", {"unbsync"}, "", "none", "Disables BetterSync", 
     runGitScript("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/BetterSync.luau", "cleanup")
 end)
 
-RegisterCommand("dex", {}, "", "none", "Loads Dex", function()
-    runGitScript("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua")
-end)
-
-RegisterCommand("simplespy", {"sspy"}, "", "none", "Loads SimpleSpy", function()
-    runGitScript("https://raw.githubusercontent.com/exxtremestuffs/SimpleSpySource/master/SimpleSpy.lua")
-end)
-
 RegisterCommand("remotespy", {"paperspy", "rspy", "pspy", "spy", "ppspy"}, "", "none", "Loads PaperSpy", function()
     Notify("Loading", "PaperSpy...")
     runGitScript("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/PaperSpy.luau")
@@ -916,11 +818,7 @@ RegisterCommand("follow", {}, "[player]", "player", "Follows player", function(a
 end)
 
 RegisterCommand("unfollow", {}, "", "none", "Stops follow", function()
-    if followConn then
-        followConn:Disconnect()
-        followConn = nil
-    end
-    followTarget = nil
+    if followConn then followConn:Disconnect(); followConn = nil end; followTarget = nil
 end)
 
 RegisterCommand("orbit", {}, "[player]", "player", "Orbits player", function(args)
@@ -938,11 +836,7 @@ RegisterCommand("orbit", {}, "[player]", "player", "Orbits player", function(arg
 end)
 
 RegisterCommand("unorbit", {}, "", "none", "Stops orbiting", function()
-    if orbitConn then
-        orbitConn:Disconnect()
-        orbitConn = nil
-    end
-    orbitTarget = nil
+    if orbitConn then orbitConn:Disconnect(); orbitConn = nil end; orbitTarget = nil
 end)
 
 RegisterCommand("camlock", {"aimlock"}, "[player]", "player", "Locks cam", function(args)
@@ -958,10 +852,7 @@ RegisterCommand("camlock", {"aimlock"}, "[player]", "player", "Locks cam", funct
 end)
 
 RegisterCommand("uncamlock", {"unaimlock"}, "", "none", "Unlocks cam", function()
-    if camlockConn then
-        camlockConn:Disconnect()
-        camlockConn = nil
-    end
+    if camlockConn then camlockConn:Disconnect(); camlockConn = nil end
 end)
 
 RegisterCommand("lookat", {"face"}, "[player]", "player", "Faces player", function(args)
@@ -983,18 +874,14 @@ end)
 
 RegisterCommand("stopanims", {"noanims"}, "", "none", "Stops anims", function()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        for _, track in ipairs(LocalPlayer.Character.Humanoid:GetPlayingAnimationTracks()) do
-            track:Stop()
-        end
+        for _, track in ipairs(LocalPlayer.Character.Humanoid:GetPlayingAnimationTracks()) do track:Stop() end
     end
 end)
 
 RegisterCommand("headless", {}, "", "none", "Removes head locally", function()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") then
         LocalPlayer.Character.Head.Transparency = 1
-        if LocalPlayer.Character.Head:FindFirstChild("face") then
-            LocalPlayer.Character.Head.face.Transparency = 1
-        end
+        if LocalPlayer.Character.Head:FindFirstChild("face") then LocalPlayer.Character.Head.face.Transparency = 1 end
     end
 end)
 
@@ -1009,27 +896,18 @@ end)
 
 RegisterCommand("playeresp", {"chams"}, "", "none", "Highlight ESP", function()
     if playerEspConn then
-        playerEspConn:Disconnect()
-        playerEspConn = nil
-        chamFolder:ClearAllChildren()
-        Notify("Visuals", "Player ESP Disabled")
+        playerEspConn:Disconnect(); playerEspConn = nil; chamFolder:ClearAllChildren(); Notify("Visuals", "Player ESP Disabled")
     else
         playerEspConn = RunService.RenderStepped:Connect(function()
             for _, player in pairs(Players:GetPlayers()) do
                 if player ~= LocalPlayer and player.Character then
                     local highlight = chamFolder:FindFirstChild(player.Name)
-                    if not highlight then
-                        highlight = Instance.new("Highlight", chamFolder)
-                        highlight.Name = player.Name
-                        highlight.FillColor = Color3.new(1, 0, 0)
-                    end
+                    if not highlight then highlight = Instance.new("Highlight", chamFolder); highlight.Name = player.Name; highlight.FillColor = Color3.new(1, 0, 0) end
                     highlight.Adornee = player.Character
                 end
             end
             for _, folderChild in pairs(chamFolder:GetChildren()) do
-                if not Players:FindFirstChild(folderChild.Name) or not Players[folderChild.Name].Character then
-                    folderChild:Destroy()
-                end
+                if not Players:FindFirstChild(folderChild.Name) or not Players[folderChild.Name].Character then folderChild:Destroy() end
             end
         end)
         Notify("Visuals", "Player ESP Enabled")
@@ -1038,9 +916,7 @@ end)
 
 RegisterCommand("itemesp", {"toolesp"}, "", "none", "Item Highlight ESP", function()
     if itemEspConn then
-        itemEspConn:Disconnect()
-        itemEspConn = nil
-        itemChamFolder:ClearAllChildren()
+        itemEspConn:Disconnect(); itemEspConn = nil; itemChamFolder:ClearAllChildren()
     else
         itemEspConn = RunService.RenderStepped:Connect(function()
             for _, tool in pairs(Workspace:GetDescendants()) do
@@ -1048,10 +924,7 @@ RegisterCommand("itemesp", {"toolesp"}, "", "none", "Item Highlight ESP", functi
                     local toolId = tool.Name .. tool:GetDebugId()
                     local highlight = itemChamFolder:FindFirstChild(toolId)
                     if not highlight then
-                        highlight = Instance.new("Highlight", itemChamFolder)
-                        highlight.Name = toolId
-                        highlight.Adornee = tool
-                        highlight.FillColor = Color3.new(0, 1, 0)
+                        highlight = Instance.new("Highlight", itemChamFolder); highlight.Name = toolId; highlight.Adornee = tool; highlight.FillColor = Color3.new(0, 1, 0)
                     end
                 end
             end
@@ -1059,48 +932,14 @@ RegisterCommand("itemesp", {"toolesp"}, "", "none", "Item Highlight ESP", functi
     end
 end)
 
-RegisterCommand("hidechat", {"hchat"}, "", "none", "Hides Chat", function()
-    pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false) end)
-end)
-
-RegisterCommand("showchat", {"schat"}, "", "none", "Shows Chat", function()
-    pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, true) end)
-end)
-
-RegisterCommand("copygameid", {"cgid"}, "", "none", "Copies GameId", function()
-    if setclipboard then
-        setclipboard(tostring(game.GameId))
-    end
-end)
-
-RegisterCommand("gameinfo", {}, "", "none", "Shows game info", function()
-    pcall(function()
-        local info = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
-        Notify("Game Info", "Name: " .. info.Name)
-    end)
-end)
-
-RegisterCommand("memory", {"mem"}, "", "none", "Shows memory", function()
-    Notify("Utility", "Memory: " .. math.floor(gcinfo() / 1024) .. " MB")
-end)
-
-RegisterCommand("executor", {"exec"}, "", "none", "Shows executor", function()
-    Notify("Utility", "Exec: " .. (identifyexecutor and identifyexecutor() or "Unknown"))
-end)
-
-RegisterCommand("network", {"net"}, "", "none", "Shows network", function()
-    Notify("Utility", "Recv: " .. math.floor(Stats.DataReceiveKbps) .. " Kbps")
-end)
+RegisterCommand("network", {"net"}, "", "none", "Shows network", function() Notify("Utility", "Recv: " .. math.floor(Stats.DataReceiveKbps) .. " Kbps") end)
 
 RegisterCommand("screenshake", {"shake"}, "", "none", "Shakes screen", function()
     if shakeConn then
-        shakeConn:Disconnect()
-        shakeConn = nil
+        shakeConn:Disconnect(); shakeConn = nil
     else
         shakeConn = RunService.RenderStepped:Connect(function()
-            if Workspace.CurrentCamera then
-                Workspace.CurrentCamera.CFrame = Workspace.CurrentCamera.CFrame * CFrame.Angles(math.rad(math.random(-2, 2)), math.rad(math.random(-2, 2)), math.rad(math.random(-2, 2)))
-            end
+            if Workspace.CurrentCamera then Workspace.CurrentCamera.CFrame = Workspace.CurrentCamera.CFrame * CFrame.Angles(math.rad(math.random(-2, 2)), math.rad(math.random(-2, 2)), math.rad(math.random(-2, 2))) end
         end)
     end
 end)
@@ -1108,9 +947,7 @@ end)
 RegisterCommand("disco", {"rainbow"}, "", "none", "Rainbow lighting", function()
     cacheLighting()
     if discoConn then
-        discoConn:Disconnect()
-        discoConn = nil
-        Lighting.Ambient = Color3.new(1, 1, 1)
+        discoConn:Disconnect(); discoConn = nil; Lighting.Ambient = Color3.new(1, 1, 1)
     else
         local hue = 0
         discoConn = RunService.RenderStepped:Connect(function()
@@ -1123,43 +960,8 @@ end)
 
 RegisterCommand("fire", {}, "", "none", "Locally set on fire", function()
     if getRoot(LocalPlayer.Character) then
-        if getRoot(LocalPlayer.Character):FindFirstChild("PFire") then
-            getRoot(LocalPlayer.Character).PFire:Destroy()
-        else
-            local fireObj = Instance.new("Fire", getRoot(LocalPlayer.Character))
-            fireObj.Name = "PFire"
-        end
-    end
-end)
-
-RegisterCommand("smoke", {}, "", "none", "Locally smoke", function()
-    if getRoot(LocalPlayer.Character) then
-        if getRoot(LocalPlayer.Character):FindFirstChild("PSmoke") then
-            getRoot(LocalPlayer.Character).PSmoke:Destroy()
-        else
-            local smokeObj = Instance.new("Smoke", getRoot(LocalPlayer.Character))
-            smokeObj.Name = "PSmoke"
-        end
-    end
-end)
-
-RegisterCommand("sparkles", {"confetti"}, "", "none", "Locally sparkle", function()
-    if getRoot(LocalPlayer.Character) then
-        if getRoot(LocalPlayer.Character):FindFirstChild("PSp") then
-            getRoot(LocalPlayer.Character).PSp:Destroy()
-        else
-            local sparklesObj = Instance.new("Sparkles", getRoot(LocalPlayer.Character))
-            sparklesObj.Name = "PSp"
-        end
-    end
-end)
-
-RegisterCommand("saveinstance", {"savegame"}, "", "none", "Saves map", function()
-    if saveinstance then
-        saveinstance()
-        Notify("System", "Saving...")
-    else
-        Notify("Error", "Not supported")
+        if getRoot(LocalPlayer.Character):FindFirstChild("PFire") then getRoot(LocalPlayer.Character).PFire:Destroy()
+        else local fireObj = Instance.new("Fire", getRoot(LocalPlayer.Character)); fireObj.Name = "PFire" end
     end
 end)
 
@@ -1175,19 +977,9 @@ local function modScale(scaleValue)
     end
 end
 
-RegisterCommand("giant", {}, "", "none", "Makes you locally giant", function()
-    cacheCharacter()
-    modScale(3)
-end)
-
-RegisterCommand("tiny", {}, "", "none", "Makes you locally tiny", function()
-    cacheCharacter()
-    modScale(0.3)
-end)
-
-RegisterCommand("normalscale", {}, "", "none", "Resets scale", function()
-    modScale(1)
-end)
+RegisterCommand("giant", {}, "", "none", "Makes you locally giant", function() cacheCharacter(); modScale(3) end)
+RegisterCommand("tiny", {}, "", "none", "Makes you locally tiny", function() cacheCharacter(); modScale(0.3) end)
+RegisterCommand("normalscale", {}, "", "none", "Resets scale", function() modScale(1) end)
 
 RegisterCommand("wide", {}, "", "none", "Makes you wide", function()
     cacheCharacter()
@@ -1196,61 +988,16 @@ RegisterCommand("wide", {}, "", "none", "Makes you wide", function()
     end
 end)
 
-RegisterCommand("flat", {}, "", "none", "Makes you flat", function()
-    cacheCharacter()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") and LocalPlayer.Character.Humanoid:FindFirstChild("BodyDepthScale") then
-        LocalPlayer.Character.Humanoid.BodyDepthScale.Value = 0.1
-    end
-end)
-
-RegisterCommand("noarms", {}, "", "none", "Removes arms locally", function()
-    cacheCharacter()
-    if LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetChildren()) do
-            if part.Name:match("Arm") or part.Name:match("Hand") then
-                part.Transparency = 1
-            end
-        end
-    end
-end)
-
-RegisterCommand("nolegs", {}, "", "none", "Removes legs locally", function()
-    cacheCharacter()
-    if LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetChildren()) do
-            if part.Name:match("Leg") or part.Name:match("Foot") then
-                part.Transparency = 1
-            end
-        end
-    end
-end)
-
-RegisterCommand("torsoonly", {}, "", "none", "Leaves only torso", function()
-    cacheCharacter()
-    if LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetChildren()) do
-            if part:IsA("BasePart") and not part.Name:match("Torso") then
-                part.Transparency = 1
-            end
-        end
-    end
-end)
-
 RegisterCommand("fixchar", {"restorechar", "unchar"}, "", "none", "Restores character parts/stats", function()
     if LocalPlayer.Character then
         for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") or part:IsA("Decal") then
-                part.Transparency = 0
-            end
+            if part:IsA("BasePart") or part:IsA("Decal") then part.Transparency = 0 end
         end
         if originalCharProps[LocalPlayer.Character] and LocalPlayer.Character:FindFirstChild("Humanoid") then
             local props = originalCharProps[LocalPlayer.Character]
             local hum = LocalPlayer.Character.Humanoid
-            hum.WalkSpeed = props.WalkSpeed
-            hum.JumpPower = props.JumpPower
-            hum.UseJumpPower = props.UseJumpPower
-            hum.HipHeight = props.HipHeight
-            hum.MaxHealth = props.MaxHealth
+            hum.WalkSpeed = props.WalkSpeed; hum.JumpPower = props.JumpPower; hum.UseJumpPower = props.UseJumpPower
+            hum.HipHeight = props.HipHeight; hum.MaxHealth = props.MaxHealth
             if hum:FindFirstChild("BodyWidthScale") then hum.BodyWidthScale.Value = props.BodyWidthScale end
             if hum:FindFirstChild("BodyHeightScale") then hum.BodyHeightScale.Value = props.BodyHeightScale end
             if hum:FindFirstChild("BodyDepthScale") then hum.BodyDepthScale.Value = props.BodyDepthScale end
@@ -1260,9 +1007,7 @@ RegisterCommand("fixchar", {"restorechar", "unchar"}, "", "none", "Restores char
 end)
 
 RegisterCommand("spamsit", {}, "", "none", "Spams sit", function()
-    if spamSitConn then
-        spamSitConn:Disconnect()
-        spamSitConn = nil
+    if spamSitConn then spamSitConn:Disconnect(); spamSitConn = nil
     else
         spamSitConn = RunService.RenderStepped:Connect(function()
             if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
@@ -1273,9 +1018,7 @@ RegisterCommand("spamsit", {}, "", "none", "Spams sit", function()
 end)
 
 RegisterCommand("spamjump", {}, "", "none", "Spams jump", function()
-    if spamJumpConn then
-        spamJumpConn:Disconnect()
-        spamJumpConn = nil
+    if spamJumpConn then spamJumpConn:Disconnect(); spamJumpConn = nil
     else
         spamJumpConn = RunService.RenderStepped:Connect(function()
             if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
@@ -1285,165 +1028,38 @@ RegisterCommand("spamjump", {}, "", "none", "Spams jump", function()
     end
 end)
 
-RegisterCommand("walk", {}, "", "none", "Speed 16", function()
-    cacheCharacter()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.WalkSpeed = 16
-    end
-end)
-
-RegisterCommand("run", {}, "", "none", "Speed 30", function()
-    cacheCharacter()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.WalkSpeed = 30
-    end
-end)
-
-RegisterCommand("sprint", {}, "", "none", "Speed 50", function()
-    cacheCharacter()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.WalkSpeed = 50
-    end
-end)
-
-RegisterCommand("flashspeed", {}, "", "none", "Speed 200", function()
-    cacheCharacter()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.WalkSpeed = 200
-    end
-end)
-
 local function doDash(vec, mult)
-    if getRoot(LocalPlayer.Character) then
-        getRoot(LocalPlayer.Character).AssemblyLinearVelocity = vec * mult
-    end
+    if getRoot(LocalPlayer.Character) then getRoot(LocalPlayer.Character).AssemblyLinearVelocity = vec * mult end
 end
-
-RegisterCommand("dashforward", {"df"}, "", "none", "Dash fwd", function()
-    if getRoot(LocalPlayer.Character) then doDash(getRoot(LocalPlayer.Character).CFrame.LookVector, 150) end
-end)
-
-RegisterCommand("dashback", {"db"}, "", "none", "Dash back", function()
-    if getRoot(LocalPlayer.Character) then doDash(-getRoot(LocalPlayer.Character).CFrame.LookVector, 150) end
-end)
-
-RegisterCommand("dashleft", {"dl"}, "", "none", "Dash left", function()
-    if getRoot(LocalPlayer.Character) then doDash(-getRoot(LocalPlayer.Character).CFrame.RightVector, 150) end
-end)
-
-RegisterCommand("dashright", {"dr"}, "", "none", "Dash right", function()
-    if getRoot(LocalPlayer.Character) then doDash(getRoot(LocalPlayer.Character).CFrame.RightVector, 150) end
-end)
-
-RegisterCommand("dashup", {"du"}, "", "none", "Dash up", function()
-    if getRoot(LocalPlayer.Character) then doDash(Vector3.new(0, 1, 0), 200) end
-end)
-
-RegisterCommand("dashdown", {"dd"}, "", "none", "Dash down", function()
-    if getRoot(LocalPlayer.Character) then doDash(Vector3.new(0, -1, 0), 200) end
-end)
-
-local function doTP(vec)
-    if getRoot(LocalPlayer.Character) then
-        getRoot(LocalPlayer.Character).CFrame = getRoot(LocalPlayer.Character).CFrame + vec
-    end
-end
-
-RegisterCommand("up", {}, "[num]", "none", "TP up studs", function(args)
-    local studs = tonumber(args[2]) or 10
-    doTP(Vector3.new(0, studs, 0))
-end)
-
-RegisterCommand("down", {}, "[num]", "none", "TP down studs", function(args)
-    local studs = tonumber(args[2]) or 10
-    doTP(Vector3.new(0, -studs, 0))
-end)
-
-RegisterCommand("forward", {"fwd"}, "[num]", "none", "TP fwd studs", function(args)
-    local studs = tonumber(args[2]) or 10
-    if getRoot(LocalPlayer.Character) then doTP(getRoot(LocalPlayer.Character).CFrame.LookVector * studs) end
-end)
-
-RegisterCommand("back", {}, "[num]", "none", "TP back studs", function(args)
-    local studs = tonumber(args[2]) or 10
-    if getRoot(LocalPlayer.Character) then doTP(-getRoot(LocalPlayer.Character).CFrame.LookVector * studs) end
-end)
-
-RegisterCommand("left", {}, "[num]", "none", "TP left studs", function(args)
-    local studs = tonumber(args[2]) or 10
-    if getRoot(LocalPlayer.Character) then doTP(-getRoot(LocalPlayer.Character).CFrame.RightVector * studs) end
-end)
-
-RegisterCommand("right", {}, "[num]", "none", "TP right studs", function(args)
-    local studs = tonumber(args[2]) or 10
-    if getRoot(LocalPlayer.Character) then doTP(getRoot(LocalPlayer.Character).CFrame.RightVector * studs) end
-end)
-
-RegisterCommand("day", {"morning"}, "", "none", "Time 14", function()
-    cacheLighting()
-    Lighting.ClockTime = 14
-end)
-
-RegisterCommand("night", {"midnight"}, "", "none", "Time 0", function()
-    cacheLighting()
-    Lighting.ClockTime = 0
-end)
+RegisterCommand("dashforward", {"df"}, "", "none", "Dash fwd", function() if getRoot(LocalPlayer.Character) then doDash(getRoot(LocalPlayer.Character).CFrame.LookVector, 150) end end)
+RegisterCommand("dashback", {"db"}, "", "none", "Dash back", function() if getRoot(LocalPlayer.Character) then doDash(-getRoot(LocalPlayer.Character).CFrame.LookVector, 150) end end)
+RegisterCommand("dashleft", {"dl"}, "", "none", "Dash left", function() if getRoot(LocalPlayer.Character) then doDash(-getRoot(LocalPlayer.Character).CFrame.RightVector, 150) end end)
+RegisterCommand("dashright", {"dr"}, "", "none", "Dash right", function() if getRoot(LocalPlayer.Character) then doDash(getRoot(LocalPlayer.Character).CFrame.RightVector, 150) end end)
 
 local originalPartProperties = {}
-
 local function cachePartProperties()
     if not next(originalPartProperties) then
         for _, part in pairs(Workspace:GetDescendants()) do
             if part:IsA("BasePart") then
-                originalPartProperties[part] = {
-                    Material = part.Material,
-                    TopSurface = part.TopSurface,
-                    BottomSurface = part.BottomSurface,
-                    Transparency = part.Transparency
-                }
+                originalPartProperties[part] = {Material = part.Material, TopSurface = part.TopSurface, BottomSurface = part.BottomSurface, Transparency = part.Transparency}
             end
         end
     end
 end
-
 local function modMaterials(materialType)
     cachePartProperties()
     for _, part in pairs(Workspace:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.Material = materialType
-        end
+        if part:IsA("BasePart") then part.Material = materialType end
     end
 end
 
-RegisterCommand("plasticworld", {}, "", "none", "World to Plastic", function()
-    modMaterials(Enum.Material.Plastic)
-end)
-
-RegisterCommand("neonworld", {}, "", "none", "World to Neon", function()
-    modMaterials(Enum.Material.Neon)
-end)
-
-RegisterCommand("wireframe", {}, "", "none", "World to Wireframe", function()
-    cachePartProperties()
-    for _, part in pairs(Workspace:GetDescendants()) do
-        if part:IsA("BasePart") then
-            local wire = Instance.new("SelectionBox", part)
-            wire.Name = "PaperWireframe"
-            wire.Adornee = part
-            wire.LineThickness = 0.01
-            part.Transparency = 1
-        end
-    end
-end)
-
+RegisterCommand("plasticworld", {}, "", "none", "World to Plastic", function() modMaterials(Enum.Material.Plastic) end)
+RegisterCommand("neonworld", {}, "", "none", "World to Neon", function() modMaterials(Enum.Material.Neon) end)
 RegisterCommand("normalworld", {"unworld", "unwireframe"}, "", "none", "Restores the world", function()
     if not next(originalPartProperties) then return end
     for part, props in pairs(originalPartProperties) do
         if part and part.Parent then
-            part.Material = props.Material
-            part.TopSurface = props.TopSurface
-            part.BottomSurface = props.BottomSurface
-            part.Transparency = props.Transparency
+            part.Material = props.Material; part.TopSurface = props.TopSurface; part.BottomSurface = props.BottomSurface; part.Transparency = props.Transparency
             local wire = part:FindFirstChild("PaperWireframe")
             if wire then wire:Destroy() end
         end
@@ -1453,321 +1069,40 @@ end)
 
 RegisterCommand("delunanchored", {}, "", "none", "Deletes unanchored parts", function()
     for _, part in pairs(Workspace:GetDescendants()) do
-        if part:IsA("BasePart") and not part.Anchored and not part.Parent:FindFirstChild("Humanoid") then
-            part:Destroy()
-        end
-    end
-end)
-
-RegisterCommand("cleartextures", {"cleardecals"}, "", "none", "Deletes decals", function()
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj:IsA("Decal") or obj:IsA("Texture") then
-            obj:Destroy()
-        end
-    end
-end)
-
-RegisterCommand("invertcam", {}, "", "none", "Upside down cam", function()
-    cacheCamera()
-    if Workspace.CurrentCamera then
-        Workspace.CurrentCamera.CFrame = Workspace.CurrentCamera.CFrame * CFrame.Angles(0, 0, math.rad(180))
-    end
-end)
-
-RegisterCommand("topdown", {}, "", "none", "Top down view", function()
-    cacheCamera()
-    if Workspace.CurrentCamera and getRoot(LocalPlayer.Character) then
-        Workspace.CurrentCamera.CameraType = Enum.CameraType.Scriptable
-        Workspace.CurrentCamera.CFrame = CFrame.new(getRoot(LocalPlayer.Character).Position + Vector3.new(0, 50, 0), getRoot(LocalPlayer.Character).Position)
+        if part:IsA("BasePart") and not part.Anchored and not part.Parent:FindFirstChild("Humanoid") then part:Destroy() end
     end
 end)
 
 RegisterCommand("fixcam", {"uncam", "normalcam"}, "", "none", "Resets Camera", function()
     if Workspace.CurrentCamera then
         Workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            Workspace.CurrentCamera.CameraSubject = LocalPlayer.Character.Humanoid
-        end
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then Workspace.CurrentCamera.CameraSubject = LocalPlayer.Character.Humanoid end
         Workspace.CurrentCamera.FieldOfView = originalCamera and originalCamera.FieldOfView or 70
     end
-    LocalPlayer.CameraMode = Enum.CameraMode.Classic
-    LocalPlayer.CameraMaxZoomDistance = 400
-end)
-
-RegisterCommand("unlockmouse", {}, "", "none", "Unlocks mouse", function()
-    UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-end)
-
-RegisterCommand("lockmouse", {}, "", "none", "Locks mouse", function()
-    UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
-end)
-
-RegisterCommand("hideplayerlist", {"hpl"}, "", "none", "Hides PlayerList", function()
-    pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false) end)
-end)
-
-RegisterCommand("showplayerlist", {"spl"}, "", "none", "Shows PlayerList", function()
-    pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, true) end)
-end)
-
-RegisterCommand("hidebackpack", {"hbp"}, "", "none", "Hides Backpack", function()
-    pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false) end)
-end)
-
-RegisterCommand("showbackpack", {"sbp"}, "", "none", "Shows Backpack", function()
-    pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, true) end)
-end)
-
-RegisterCommand("muteall", {"mute"}, "", "none", "Mutes game", function()
-    game:GetService("SoundService").AmbientReverb = Enum.ReverbType.NoReverb
-    for _, sound in pairs(Workspace:GetDescendants()) do
-        if sound:IsA("Sound") then
-            sound.Volume = 0
-        end
-    end
-end)
-
-RegisterCommand("unmuteall", {"unmute"}, "", "none", "Unmutes game", function()
-    for _, sound in pairs(Workspace:GetDescendants()) do
-        if sound:IsA("Sound") then
-            sound.Volume = 1
-        end
-    end
-end)
-
-RegisterCommand("stopsounds", {}, "", "none", "Stops all playing sounds", function()
-    for _, sound in pairs(Workspace:GetDescendants()) do
-        if sound:IsA("Sound") then
-            sound:Stop()
-        end
-    end
+    LocalPlayer.CameraMode = Enum.CameraMode.Classic; LocalPlayer.CameraMaxZoomDistance = 400
 end)
 
 local function setColorChams(color)
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             local highlight = chamFolder:FindFirstChild(player.Name)
-            if not highlight then
-                highlight = Instance.new("Highlight", chamFolder)
-                highlight.Name = player.Name
-                highlight.Adornee = player.Character
-            end
+            if not highlight then highlight = Instance.new("Highlight", chamFolder); highlight.Name = player.Name; highlight.Adornee = player.Character end
             highlight.FillColor = color
         end
     end
 end
-
 RegisterCommand("redchams", {}, "", "none", "Red Player ESP", function() setColorChams(Color3.new(1, 0, 0)) end)
 RegisterCommand("bluechams", {}, "", "none", "Blue Player ESP", function() setColorChams(Color3.new(0, 0, 1)) end)
 RegisterCommand("greenchams", {}, "", "none", "Green Player ESP", function() setColorChams(Color3.new(0, 1, 0)) end)
+RegisterCommand("clearchams", {}, "", "none", "Removes Color ESP", function() chamFolder:ClearAllChildren() end)
 
-RegisterCommand("clearchams", {}, "", "none", "Removes Color ESP", function()
-    chamFolder:ClearAllChildren()
-end)
-
-RegisterCommand("copylookvector", {"clv"}, "", "none", "Copies lookvector", function()
-    if setclipboard and getRoot(LocalPlayer.Character) then
-        setclipboard(tostring(getRoot(LocalPlayer.Character).CFrame.LookVector))
-    end
-end)
-
-RegisterCommand("copydisplayname", {"cdn"}, "", "none", "Copies displayname", function()
-    if setclipboard then
-        setclipboard(LocalPlayer.DisplayName)
-    end
-end)
-
-RegisterCommand("copyusername", {"cun"}, "", "none", "Copies username", function()
-    if setclipboard then
-        setclipboard(LocalPlayer.Name)
-    end
-end)
-
-RegisterCommand("copycframe", {"ccf"}, "", "none", "Copies full CFrame", function()
-    if setclipboard and getRoot(LocalPlayer.Character) then
-        setclipboard(tostring(getRoot(LocalPlayer.Character).CFrame))
-    end
-end)
-
-RegisterCommand("clearclipboard", {"ccb"}, "", "none", "Clears clipboard", function()
-    if setclipboard then
-        setclipboard("")
-    end
-end)
-
-RegisterCommand("zerogravity", {"zerog"}, "", "none", "Gravity 0", function()
-    Workspace.Gravity = 0
-end)
-
-RegisterCommand("laydown", {"sleep"}, "", "none", "Lays character down", function()
-    if getRoot(LocalPlayer.Character) then
-        getRoot(LocalPlayer.Character).CFrame = getRoot(LocalPlayer.Character).CFrame * CFrame.Angles(math.rad(-90), 0, 0)
-    end
-end)
-
-RegisterCommand("upsidedown", {}, "", "none", "Flips character", function()
-    if getRoot(LocalPlayer.Character) then
-        getRoot(LocalPlayer.Character).CFrame = getRoot(LocalPlayer.Character).CFrame * CFrame.Angles(math.rad(180), 0, 0)
-    end
-end)
-
-RegisterCommand("sideways", {}, "", "none", "Turns character", function()
-    if getRoot(LocalPlayer.Character) then
-        getRoot(LocalPlayer.Character).CFrame = getRoot(LocalPlayer.Character).CFrame * CFrame.Angles(0, 0, math.rad(90))
-    end
-end)
-
-RegisterCommand("massless", {}, "", "none", "Makes parts massless", function()
-    if LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Massless = true
-            end
-        end
-    end
-end)
-
-RegisterCommand("unmassless", {}, "", "none", "Removes massless", function()
-    if LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Massless = false
-            end
-        end
-    end
-end)
-
-RegisterCommand("tpsky", {}, "", "none", "Teleports extremely high", function()
-    if getRoot(LocalPlayer.Character) then
-        getRoot(LocalPlayer.Character).CFrame = getRoot(LocalPlayer.Character).CFrame + Vector3.new(0, 50000, 0)
-    end
-end)
-
-RegisterCommand("tpvoid", {}, "", "none", "Teleports to the void", function()
-    if getRoot(LocalPlayer.Character) then
-        getRoot(LocalPlayer.Character).CFrame = getRoot(LocalPlayer.Character).CFrame - Vector3.new(0, 50000, 0)
-    end
-end)
-
-RegisterCommand("noface", {"removeface"}, "", "none", "Removes local face", function()
-    cacheCharacter()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") and LocalPlayer.Character.Head:FindFirstChild("face") then
-        LocalPlayer.Character.Head.face:Destroy()
-    end
-end)
-
-RegisterCommand("deletehats", {"nohats"}, "", "none", "Removes hats locally", function()
-    cacheCharacter()
-    if LocalPlayer.Character then
-        for _, obj in pairs(LocalPlayer.Character:GetChildren()) do
-            if obj:IsA("Accessory") then
-                obj:Destroy()
-            end
-        end
-    end
-end)
-
-RegisterCommand("removeterrain", {"noterrain"}, "", "none", "Clears local terrain", function()
-    Workspace.Terrain:Clear()
-end)
-
-RegisterCommand("nofoliage", {"nograss"}, "", "none", "Removes grass details", function()
-    Workspace.Terrain.Decoration = false
-end)
-
-RegisterCommand("btools", {"f3x"}, "", "none", "Loads BTools locally", function()
-    local btools = Instance.new("HopperBin", LocalPlayer.Backpack)
-    btools.BinType = Enum.BinType.Clone
-    local btools2 = Instance.new("HopperBin", LocalPlayer.Backpack)
-    btools2.BinType = Enum.BinType.Hammer
-    local btools3 = Instance.new("HopperBin", LocalPlayer.Backpack)
-    btools3.BinType = Enum.BinType.Grab
-    Notify("Tools", "Classic BTools Added")
-end)
-
-RegisterCommand("lagserver", {}, "", "none", "FPS drop loops", function()
-    RunService.RenderStepped:Connect(function()
-        for i = 1, 1000 do
-            local mathWaste = math.sqrt(i * i)
-        end
-    end)
-    Notify("Warning", "Client lag generated")
-end)
-
-RegisterCommand("printpos", {}, "", "none", "Prints position", function()
-    if getRoot(LocalPlayer.Character) then
-        print(getRoot(LocalPlayer.Character).Position)
-    end
-end)
-
-local function checkAndHop()
-    if not isfile or not readfile or not writefile or not delfile then return end
-    if not isfile("Paper_SearchData.json") then return end
-    
-    local dataStr = readfile("Paper_SearchData.json")
-    local success, data = pcall(function() return HttpService:JSONDecode(dataStr) end)
-    if not success or type(data) ~= "table" then return end
-    
-    local target = data.Target
-    local found = false
-    
-    for _, p in ipairs(Players:GetPlayers()) do
-        if string.lower(p.Name) == string.lower(target) or string.lower(p.DisplayName) == string.lower(target) or tostring(p.UserId) == string.lower(target) then
-            found = true
-            break
-        end
-    end
-    
-    if found then
-        Notify("Found", target .. " is in this server!")
-        pcall(function() delfile("Paper_SearchData.json") end)
-        return
-    end
-    
-    data.Visited[game.JobId] = true
-    pcall(function() writefile("Paper_SearchData.json", HttpService:JSONEncode(data)) end)
-    
-    local req = request or http_request or (syn and syn.request)
-    if not req then return end
-    
-    local cursor = ""
-    local nextServer = nil
-    
-    while not nextServer do
-        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-        if cursor ~= "" then url = url .. "&cursor=" .. cursor end
-        
-        local res = req({Url = url, Method = "GET"})
-        if res and res.StatusCode == 200 then
-            local body = HttpService:JSONDecode(res.Body)
-            for _, srv in ipairs(body.data) do
-                if srv.playing < srv.maxPlayers and not data.Visited[srv.id] and srv.id ~= game.JobId then
-                    nextServer = srv.id
-                    break
-                end
-            end
-            if nextServer then break end
-            cursor = body.nextPageCursor
-            if not cursor or cursor == "" then break end
-        else
-            break
-        end
-    end
-    
-    if nextServer then
-        TeleportService:TeleportToPlaceInstance(game.PlaceId, nextServer, LocalPlayer)
-    else
-        Notify("Error", "Could not find server for " .. target)
-        pcall(function() delfile("Paper_SearchData.json") end)
-    end
-end
-
+-- FAST HOP: Server Hop to find player
 RegisterCommand("find", {"join"}, "[userid/name]", "none", "Server hops to find player", function(args)
     local target = args[2]
     if not target then return end
     if writefile then
         pcall(function() writefile("Paper_SearchData.json", HttpService:JSONEncode({Target = target, Visited = {}})) end)
-        checkAndHop()
+        if PaperAPI and PaperAPI.DoFastHop then PaperAPI.DoFastHop() end
     else
         Notify("Error", "Executor does not support writefile.")
     end
@@ -1780,4 +1115,49 @@ RegisterCommand("stopfind", {"stopjoin"}, "", "none", "Stops server hopping", fu
     end
 end)
 
-task.spawn(checkAndHop)
+-- FAST HOP: Server list scanner
+RegisterCommand("listservers", {"ls"}, "", "none", "Scans and lists servers", function()
+    local req = request or http_request or (syn and syn.request) or (fluxus and fluxus.request)
+    if not req then return Notify("Error", "Executor does not support requests.") end
+
+    Notify("Scanner", "Fetching server list via API...")
+    
+    local serversToVisit = {}
+    local cursor = ""
+    for _ = 1, 3 do 
+        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"
+        if cursor ~= "" then url = url .. "&cursor=" .. cursor end
+        local res = req({Url = url, Method = "GET"})
+        if res and res.StatusCode == 200 then
+            local body = HttpService:JSONDecode(res.Body)
+            for _, srv in ipairs(body.data) do
+                if srv.id ~= game.JobId then
+                    table.insert(serversToVisit, srv.id)
+                end
+            end
+            cursor = body.nextPageCursor
+            if not cursor or cursor == "" then break end
+        else break end
+    end
+    
+    if #serversToVisit == 0 then return Notify("Scanner", "No other servers found.") end
+
+    local estTime = math.ceil(#serversToVisit * 6 / 60)
+    PaperAPI.ShowConfirmPrompt(
+        "Server Scanner", 
+        "Found " .. #serversToVisit .. " other servers.\nEstimated time to scan: " .. estTime .. " minute(s).\n\nYou will be seamlessly teleported to fetch everyone, then returned to exactly where you stand. Proceed?",
+        function()
+            local root = getRoot(LocalPlayer.Character)
+            local pos = root and {X = root.Position.X, Y = root.Position.Y, Z = root.Position.Z} or nil
+            
+            local payload = {
+                OriginalJobId = game.JobId,
+                OriginalPosition = pos,
+                ServersToVisit = serversToVisit,
+                GatheredData = {}
+            }
+            pcall(function() writefile("Paper_ListServers.json", HttpService:JSONEncode(payload)) end)
+            if PaperAPI and PaperAPI.DoFastHop then PaperAPI.DoFastHop() end
+        end
+    )
+end)
