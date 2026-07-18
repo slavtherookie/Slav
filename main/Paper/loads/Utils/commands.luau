@@ -1,5 +1,20 @@
+--- START OF FILE Paste July 18, 2026 - 2:03AM ---
+local DEBUG_MODE = true -- Set to false to disable debug prints in console
+
+local function DebugPrint(msg)
+    if DEBUG_MODE then
+        print("[Paper Debug] " .. tostring(msg))
+    end
+end
+
+DebugPrint("Initializing commands.luau...")
 
 local PaperAPI = ...
+if not PaperAPI then
+    warn("[Paper Debug] FATAL ERROR: PaperAPI is nil! commands.luau must be loaded by Paper.luau")
+    return
+end
+
 local OriginalRegisterCommand = PaperAPI.RegisterCommand
 local Notify = PaperAPI.Notify
 local GetPlayer = PaperAPI.GetPlayer
@@ -19,7 +34,17 @@ local function RegisterCommand(name, aliases, argHint, argType, description, cal
         ArgType = argType,
         Description = description
     })
-    OriginalRegisterCommand(name, aliases, argHint, argType, description, callback)
+    -- Wrap the callback to catch errors and print debug info
+    OriginalRegisterCommand(name, aliases, argHint, argType, description, function(args)
+        DebugPrint("Command Executed: " .. name .. " | Args: " .. table.concat(args, ", "))
+        local success, err = pcall(callback, args)
+        if not success then
+            DebugPrint("ERROR in command '" .. name .. "': " .. tostring(err))
+            if DEBUG_MODE then
+                Notify("Command Error", "Check console (F9) for details.")
+            end
+        end
+    end)
 end
 
 local Players = game:GetService("Players")
@@ -55,23 +80,13 @@ local originalWorkspaceProps = nil
 
 local function cacheLighting()
     if not originalLighting then
-        originalLighting = {
-            Ambient = Lighting.Ambient,
-            Brightness = Lighting.Brightness,
-            ClockTime = Lighting.ClockTime,
-            FogEnd = Lighting.FogEnd,
-            GlobalShadows = Lighting.GlobalShadows
-        }
+        originalLighting = { Ambient = Lighting.Ambient, Brightness = Lighting.Brightness, ClockTime = Lighting.ClockTime, FogEnd = Lighting.FogEnd, GlobalShadows = Lighting.GlobalShadows }
     end
 end
 
 local function cacheCamera()
     if not originalCamera and Workspace.CurrentCamera then
-        originalCamera = {
-            FieldOfView = Workspace.CurrentCamera.FieldOfView,
-            CameraType = Workspace.CurrentCamera.CameraType,
-            CameraSubject = Workspace.CurrentCamera.CameraSubject
-        }
+        originalCamera = { FieldOfView = Workspace.CurrentCamera.FieldOfView, CameraType = Workspace.CurrentCamera.CameraType, CameraSubject = Workspace.CurrentCamera.CameraSubject }
     end
 end
 
@@ -79,26 +94,12 @@ local function cacheCharacter()
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") and not originalCharProps[char] then
         local hum = char.Humanoid
-        originalCharProps[char] = {
-            WalkSpeed = hum.WalkSpeed,
-            JumpPower = hum.JumpPower,
-            UseJumpPower = hum.UseJumpPower,
-            HipHeight = hum.HipHeight,
-            MaxHealth = hum.MaxHealth,
-            BodyWidthScale = hum:FindFirstChild("BodyWidthScale") and hum.BodyWidthScale.Value or 1,
-            BodyHeightScale = hum:FindFirstChild("BodyHeightScale") and hum.BodyHeightScale.Value or 1,
-            BodyDepthScale = hum:FindFirstChild("BodyDepthScale") and hum.BodyDepthScale.Value or 1,
-            HeadScale = hum:FindFirstChild("HeadScale") and hum.HeadScale.Value or 1
-        }
+        originalCharProps[char] = { WalkSpeed = hum.WalkSpeed, JumpPower = hum.JumpPower, UseJumpPower = hum.UseJumpPower, HipHeight = hum.HipHeight, MaxHealth = hum.MaxHealth, BodyWidthScale = hum:FindFirstChild("BodyWidthScale") and hum.BodyWidthScale.Value or 1, BodyHeightScale = hum:FindFirstChild("BodyHeightScale") and hum.BodyHeightScale.Value or 1, BodyDepthScale = hum:FindFirstChild("BodyDepthScale") and hum.BodyDepthScale.Value or 1, HeadScale = hum:FindFirstChild("HeadScale") and hum.HeadScale.Value or 1 }
     end
 end
 
 local function cacheWorkspace()
-    if not originalWorkspaceProps then
-        originalWorkspaceProps = {
-            Gravity = Workspace.Gravity
-        }
-    end
+    if not originalWorkspaceProps then originalWorkspaceProps = { Gravity = Workspace.Gravity } end
 end
 
 local fcEnabled = false
@@ -266,10 +267,7 @@ end)
 RegisterCommand("unlocate", {"unesp"}, "", "none", "Removes locates", function()
     local count = 0
     local toRemove = {}
-    for t, e in pairs(activeESPs) do
-        table.insert(toRemove, e)
-        count = count + 1
-    end
+    for t, e in pairs(activeESPs) do table.insert(toRemove, e); count = count + 1 end
     for _, e in ipairs(toRemove) do pcall(e.Cleanup) end
     activeESPs = {}
     Notify("Locate", "Removed " .. count .. " trackers")
@@ -1101,9 +1099,15 @@ RegisterCommand("clearchams", {}, "", "none", "Removes Color ESP", function() ch
 RegisterCommand("find", {"join"}, "[userid/name]", "none", "Server hops to find player", function(args)
     local target = args[2]
     if not target then return end
+    DebugPrint("Find command initiated for: " .. tostring(target))
     if writefile then
         pcall(function() writefile("Paper_SearchData.json", HttpService:JSONEncode({Target = target, Visited = {}})) end)
-        if PaperAPI and PaperAPI.DoFastHop then PaperAPI.DoFastHop() end
+        if PaperAPI and PaperAPI.DoFastHop then
+            DebugPrint("Calling DoFastHop API...")
+            PaperAPI.DoFastHop()
+        else
+            DebugPrint("PaperAPI.DoFastHop is missing. Update Paper.luau!")
+        end
     else
         Notify("Error", "Executor does not support writefile.")
     end
@@ -1113,58 +1117,84 @@ RegisterCommand("stopfind", {"stopjoin"}, "", "none", "Stops server hopping", fu
     if isfile and isfile("Paper_SearchData.json") then
         pcall(function() delfile("Paper_SearchData.json") end)
         Notify("Stopped", "Server hopping stopped.")
+        DebugPrint("Stopped searching. Deleted Paper_SearchData.json")
     end
 end)
 
 -- FAST HOP: Specific Server / Current Server
 RegisterCommand("listserver", {"ls", "serverlist"}, "[jobid?]", "none", "Lists players in a server", function(args)
     local targetJobId = args[2]
+    DebugPrint("listserver command executed. Arg: " .. tostring(targetJobId))
     
-    -- If NO JobId provided, simply load the current server instantly!
     if not targetJobId or targetJobId == "" then
+        DebugPrint("No JobId provided. Gathering current server players.")
         local playersList = {}
         for _, p in ipairs(Players:GetPlayers()) do
             table.insert(playersList, {UserId = p.UserId, Name = p.Name, DisplayName = p.DisplayName})
         end
-        PaperAPI.ShowServerListUI({ [game.JobId] = playersList })
-        Notify("Scanner", "Showing current server.")
+        local currentJobId = game.JobId
+        if currentJobId == nil or currentJobId == "" then
+            currentJobId = "Studio/Local_Server"
+            DebugPrint("JobId is empty (likely Studio). Replaced with placeholder.")
+        end
+
+        DebugPrint("Players fetched: " .. #playersList .. ". Calling PaperAPI.ShowServerListUI")
+        if PaperAPI and PaperAPI.ShowServerListUI then
+            PaperAPI.ShowServerListUI({ [currentJobId] = playersList })
+            Notify("Scanner", "Showing current server.")
+        else
+            DebugPrint("ERROR: PaperAPI.ShowServerListUI is missing! Update your Paper.luau")
+            Notify("Error", "UI API Missing! Update Paper.luau")
+        end
     else
-        -- If JobId IS provided, scan that specific server then return!
-        PaperAPI.ShowConfirmPrompt(
-            "Server Scanner", 
-            "Hop to specific server and return to here?\nJobId: " .. targetJobId,
-            function()
-                local root = getRoot(LocalPlayer.Character)
-                local pos = root and {X = root.Position.X, Y = root.Position.Y, Z = root.Position.Z} or nil
-                
-                local payload = {
-                    OriginalJobId = game.JobId,
-                    OriginalPosition = pos,
-                    ServersToVisit = {targetJobId},
-                    GatheredData = {}
-                }
-                pcall(function() writefile("Paper_ListServers.json", HttpService:JSONEncode(payload)) end)
-                if PaperAPI and PaperAPI.DoFastHop then PaperAPI.DoFastHop() end
-            end
-        )
+        DebugPrint("Specific JobId provided: " .. targetJobId .. ". Prompting for teleport...")
+        if PaperAPI and PaperAPI.ShowConfirmPrompt then
+            PaperAPI.ShowConfirmPrompt(
+                "Server Scanner", 
+                "Hop to specific server and return to here?\nJobId: " .. targetJobId,
+                function()
+                    DebugPrint("User confirmed hop to specific JobID.")
+                    local root = getRoot(LocalPlayer.Character)
+                    local pos = root and {X = root.Position.X, Y = root.Position.Y, Z = root.Position.Z} or nil
+                    
+                    local payload = {
+                        OriginalJobId = game.JobId,
+                        OriginalPosition = pos,
+                        ServersToVisit = {targetJobId},
+                        GatheredData = {}
+                    }
+                    pcall(function() writefile("Paper_ListServers.json", HttpService:JSONEncode(payload)) end)
+                    if PaperAPI.DoFastHop then PaperAPI.DoFastHop() end
+                end
+            )
+        else
+            DebugPrint("ERROR: PaperAPI.ShowConfirmPrompt is missing! Update your Paper.luau")
+            Notify("Error", "UI API Missing! Update Paper.luau")
+        end
     end
 end)
 
 -- FAST HOP: Scan ALL Servers
-RegisterCommand("scanallservers", {"scanall"}, "", "none", "Scans all servers", function()
+RegisterCommand("listservers", {"scanall"}, "", "none", "Scans all servers", function()
+    DebugPrint("listservers command executed. Preparing to fetch API...")
     local req = request or http_request or (syn and syn.request) or (fluxus and fluxus.request)
-    if not req then return Notify("Error", "Executor does not support requests.") end
+    if not req then 
+        DebugPrint("No valid HTTP request function found for this executor.")
+        return Notify("Error", "Executor does not support HTTP requests.") 
+    end
 
     Notify("Scanner", "Fetching server list via API...")
     
     local serversToVisit = {}
     local cursor = ""
-    for _ = 1, 3 do 
-        -- USE ROPROXY HERE SO IT DOESN'T GET BLOCKED
+    for page = 1, 3 do 
         local url = "https://games.roproxy.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"
         if cursor ~= "" then url = url .. "&cursor=" .. cursor end
+        DebugPrint("Requesting server list. URL: " .. url)
+        
         local res = req({Url = url, Method = "GET"})
         if res and res.StatusCode == 200 then
+            DebugPrint("API Request Success (Page " .. page .. ")")
             local body = HttpService:JSONDecode(res.Body)
             for _, srv in ipairs(body.data) do
                 if srv.id ~= game.JobId then
@@ -1172,31 +1202,43 @@ RegisterCommand("scanallservers", {"scanall"}, "", "none", "Scans all servers", 
                 end
             end
             cursor = body.nextPageCursor
-            if not cursor or cursor == "" then break end
+            if not cursor or cursor == "" then 
+                DebugPrint("No more pages.")
+                break 
+            end
         else 
-            Notify("Error", "API request blocked or failed. Code: " .. tostring(res and res.StatusCode))
+            local code = res and tostring(res.StatusCode) or "N/A"
+            DebugPrint("API Request FAILED. Status Code: " .. code)
+            Notify("Error", "API request failed. Code: " .. code)
             break 
         end
     end
     
+    DebugPrint("Total servers found to visit: " .. #serversToVisit)
     if #serversToVisit == 0 then return Notify("Scanner", "No other servers found to scan.") end
 
     local estTime = math.ceil(#serversToVisit * 6 / 60)
-    PaperAPI.ShowConfirmPrompt(
-        "Scan All Servers", 
-        "Found " .. #serversToVisit .. " other servers.\nEstimated time to scan: " .. estTime .. " minute(s).\n\nYou will be seamlessly teleported to fetch everyone, then returned to exactly where you stand. Proceed?",
-        function()
-            local root = getRoot(LocalPlayer.Character)
-            local pos = root and {X = root.Position.X, Y = root.Position.Y, Z = root.Position.Z} or nil
-            
-            local payload = {
-                OriginalJobId = game.JobId,
-                OriginalPosition = pos,
-                ServersToVisit = serversToVisit,
-                GatheredData = {}
-            }
-            pcall(function() writefile("Paper_ListServers.json", HttpService:JSONEncode(payload)) end)
-            if PaperAPI and PaperAPI.DoFastHop then PaperAPI.DoFastHop() end
-        end
-    )
+    if PaperAPI and PaperAPI.ShowConfirmPrompt then
+        PaperAPI.ShowConfirmPrompt(
+            "Scan All Servers", 
+            "Found " .. #serversToVisit .. " other servers.\nEstimated time to scan: " .. estTime .. " minute(s).\n\nYou will be seamlessly teleported to fetch everyone, then returned to exactly where you stand. Proceed?",
+            function()
+                DebugPrint("User confirmed all server scan.")
+                local root = getRoot(LocalPlayer.Character)
+                local pos = root and {X = root.Position.X, Y = root.Position.Y, Z = root.Position.Z} or nil
+                
+                local payload = {
+                    OriginalJobId = game.JobId,
+                    OriginalPosition = pos,
+                    ServersToVisit = serversToVisit,
+                    GatheredData = {}
+                }
+                pcall(function() writefile("Paper_ListServers.json", HttpService:JSONEncode(payload)) end)
+                if PaperAPI.DoFastHop then PaperAPI.DoFastHop() end
+            end
+        )
+    else
+        DebugPrint("ERROR: PaperAPI.ShowConfirmPrompt is missing! Update your Paper.luau")
+        Notify("Error", "UI API Missing! Update Paper.luau")
+    end
 end)
