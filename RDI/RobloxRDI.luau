@@ -518,10 +518,6 @@ end
 selectTab("Explorer")
 updateExplorer()
 
-task.spawn(function()
-	while task.wait(Configuration.RefreshRate) do
-		if Pages.Stats.Visible then
-			updateStats()
-		end
-	end
-end)
+RDI.Loaded = true
+
+return RDI
