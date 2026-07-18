@@ -1,4 +1,3 @@
---- START OF FILE Paste July 18, 2026 - 2:03AM ---
 local DEBUG_MODE = true -- Set to false to disable debug prints in console
 
 local function DebugPrint(msg)
