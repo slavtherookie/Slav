@@ -34,6 +34,7 @@ local TeleportService = game:GetService("TeleportService")
 local ContentProvider = game:GetService("ContentProvider")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
+local MarketplaceService = game:GetService("MarketplaceService")
 local LocalPlayer = Players.LocalPlayer
 
 local guiName = "PaperAdmin"
@@ -104,7 +105,6 @@ local function DoFastHop()
 
 	if isfile("Paper_ListServers.json") then
 		local data = HttpService:JSONDecode(readfile("Paper_ListServers.json"))
-		
 		local serverPlayers = {}
 		for _, p in ipairs(Players:GetPlayers()) do
 			table.insert(serverPlayers, {UserId = p.UserId, Name = p.Name, DisplayName = p.DisplayName})
@@ -129,8 +129,8 @@ local function DoFastHop()
 	return false
 end
 
+local isHopping = false
 if isfile then
-	local isHopping = false
 	if isfile("Paper_SearchData.json") then isHopping = true end
 	if isfile("Paper_ListServers.json") then
 		local ds, dt = pcall(function() return HttpService:JSONDecode(readfile("Paper_ListServers.json")) end)
@@ -140,7 +140,7 @@ if isfile then
 	end
 	if isHopping then
 		if not game:IsLoaded() then game.Loaded:Wait() end
-		task.wait(1.5)
+		task.wait(1)
 		if DoFastHop() then return end 
 	end
 end
@@ -176,6 +176,13 @@ task.spawn(function()
 		end)
 	end
 end)
+
+local function RunGitScript(url, arg1, arg2)
+	local success, err = pcall(function()
+		local scriptFunc = loadstring(game:HttpGet(url))
+		if scriptFunc then scriptFunc(arg1, arg2) end
+	end)
+end
 
 local function RegisterCommand(name, aliases, argHint, argType, description, callback)
 	table.insert(CommandRegistry, {
@@ -390,38 +397,67 @@ local function ShowServerListUI(gatheredData)
 
 	local main = Instance.new("Frame", sg)
 	main.Size = UDim2.new(0, 600, 0, 0)
-	main.Position = UDim2.new(0.5, -300, 0.5, -200)
+	main.Position = UDim2.new(0.5, -300, 0.5, -240)
 	main.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
 	main.ClipsDescendants = true
 	main.Active = true
 	main.ZIndex = 150
-	Instance.new("UICorner", main).CornerRadius = UDim.new(0, 4)
+	Instance.new("UICorner", main).CornerRadius = UDim.new(0, 6)
 	Instance.new("UIStroke", main).Color = Color3.fromRGB(45, 45, 45)
 
+	local banner = Instance.new("ImageLabel", main)
+	banner.Size = UDim2.new(1, 0, 0, 80)
+	banner.Position = UDim2.new(0, 0, 0, 0)
+	banner.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+	banner.ScaleType = Enum.ScaleType.Crop
+	banner.ZIndex = 151
+	task.spawn(function()
+		pcall(function()
+			local info = MarketplaceService:GetProductInfo(game.PlaceId)
+			if info and info.IconImageAssetId then
+				banner.Image = "rbxassetid://" .. info.IconImageAssetId
+			end
+		end)
+	end)
+
+	local bannerGrad = Instance.new("UIGradient", banner)
+	bannerGrad.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.new(0, 0, 0)),
+		ColorSequenceKeypoint.new(1, Color3.new(0, 0, 0))
+	})
+	bannerGrad.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.2),
+		NumberSequenceKeypoint.new(1, 0.9)
+	})
+
 	local topDrag = Instance.new("TextButton", main)
-	topDrag.Size = UDim2.new(1, -40, 0, 35)
+	topDrag.Size = UDim2.new(1, -40, 0, 80)
 	topDrag.BackgroundTransparency = 1
 	topDrag.Text = ""
-	topDrag.ZIndex = 155
+	topDrag.ZIndex = 160
 	
 	local titleLbl = Instance.new("TextLabel", main)
 	titleLbl.Size = UDim2.new(0, 300, 0, 35)
-	titleLbl.Position = UDim2.new(0, 14, 0, 0)
+	titleLbl.Position = UDim2.new(0, 14, 0, 10)
 	titleLbl.BackgroundTransparency = 1
 	titleLbl.Text = "Server Scanner Results"
-	titleLbl.TextColor3 = Color3.fromRGB(240, 240, 240)
-	titleLbl.Font = Enum.Font.GothamMedium
-	titleLbl.TextSize = 13
+	titleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+	titleLbl.Font = Enum.Font.GothamBold
+	titleLbl.TextSize = 18
 	titleLbl.TextXAlignment = Enum.TextXAlignment.Left
-	titleLbl.ZIndex = 151
+	titleLbl.ZIndex = 152
+	local titleShadow = Instance.new("UIStroke", titleLbl)
+	titleShadow.Color = Color3.fromRGB(0, 0, 0)
+	titleShadow.Thickness = 1
 
 	local cbtn = Instance.new("ImageButton", main)
-	cbtn.Size = UDim2.new(0, 16, 0, 16)
-	cbtn.Position = UDim2.new(1, -24, 0, 9)
+	cbtn.Size = UDim2.new(0, 20, 0, 20)
+	cbtn.Position = UDim2.new(1, -28, 0, 14)
 	cbtn.BackgroundTransparency = 1
 	cbtn.Image = CLOSE_ICON
-	cbtn.ImageColor3 = Color3.fromRGB(180, 180, 180)
-	cbtn.ZIndex = 155
+	cbtn.ImageColor3 = Color3.fromRGB(220, 220, 220)
+	cbtn.ZIndex = 160
+	Instance.new("UIStroke", cbtn).Color = Color3.fromRGB(0, 0, 0)
 
 	local isClosing = false
 	cbtn.MouseButton1Click:Connect(function()
@@ -433,42 +469,42 @@ local function ShowServerListUI(gatheredData)
 
 	local sep = Instance.new("Frame", main)
 	sep.Size = UDim2.new(1, 0, 0, 1)
-	sep.Position = UDim2.new(0, 0, 0, 35)
-	sep.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	sep.Position = UDim2.new(0, 0, 0, 80)
+	sep.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 	sep.BorderSizePixel = 0
-	sep.ZIndex = 151
+	sep.ZIndex = 153
 
 	local left = Instance.new("ScrollingFrame", main)
-	left.Size = UDim2.new(0, 180, 1, -36)
-	left.Position = UDim2.new(0, 0, 0, 36)
+	left.Size = UDim2.new(0, 180, 1, -81)
+	left.Position = UDim2.new(0, 0, 0, 81)
 	left.BackgroundTransparency = 1
 	left.ScrollBarThickness = 2
-	left.ZIndex = 151
+	left.ZIndex = 152
 	local lLayout = Instance.new("UIListLayout", left)
 	lLayout.Padding = UDim.new(0, 2)
 	lLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() left.CanvasSize = UDim2.new(0,0,0,lLayout.AbsoluteContentSize.Y) end)
 
 	local vSep = Instance.new("Frame", main)
-	vSep.Size = UDim2.new(0, 1, 1, -36)
-	vSep.Position = UDim2.new(0, 180, 0, 36)
+	vSep.Size = UDim2.new(0, 1, 1, -81)
+	vSep.Position = UDim2.new(0, 180, 0, 81)
 	vSep.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 	vSep.BorderSizePixel = 0
-	vSep.ZIndex = 151
+	vSep.ZIndex = 153
 
 	local right = Instance.new("ScrollingFrame", main)
-	right.Size = UDim2.new(1, -181, 1, -36)
-	right.Position = UDim2.new(0, 181, 0, 36)
+	right.Size = UDim2.new(1, -181, 1, -81)
+	right.Position = UDim2.new(0, 181, 0, 81)
 	right.BackgroundTransparency = 1
 	right.ScrollBarThickness = 4
-	right.ZIndex = 151
+	right.ZIndex = 152
 	local rLayout = Instance.new("UIGridLayout", right)
-	rLayout.CellSize = UDim2.new(0, 100, 0, 130)
-	rLayout.CellPadding = UDim2.new(0, 10, 0, 10)
+	rLayout.CellSize = UDim2.new(0, 110, 0, 140)
+	rLayout.CellPadding = UDim2.new(0, 15, 0, 15)
 	rLayout.FillDirectionMaxCells = 3
 	rLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() right.CanvasSize = UDim2.new(0,0,0,rLayout.AbsoluteContentSize.Y + 20) end)
 	local rPad = Instance.new("UIPadding", right)
-	rPad.PaddingTop = UDim.new(0, 10)
-	rPad.PaddingLeft = UDim.new(0, 10)
+	rPad.PaddingTop = UDim.new(0, 15)
+	rPad.PaddingLeft = UDim.new(0, 15)
 
 	local dragging, dInput, dStart, sPos
 	topDrag.InputBegan:Connect(function(input)
@@ -493,15 +529,15 @@ local function ShowServerListUI(gatheredData)
 	local count = 1
 	for jobId, players in pairs(gatheredData) do
 		local btn = Instance.new("TextButton", left)
-		btn.Size = UDim2.new(1, 0, 0, 30)
+		btn.Size = UDim2.new(1, 0, 0, 32)
 		btn.BackgroundTransparency = 1
 		local dispId = (jobId == game.JobId) and "Current Server" or ("Server " .. count)
 		btn.Text = "  " .. dispId .. " (" .. #players .. ")"
 		btn.TextColor3 = Color3.fromRGB(160, 160, 160)
 		btn.Font = Enum.Font.GothamMedium
-		btn.TextSize = 12
+		btn.TextSize = 13
 		btn.TextXAlignment = Enum.TextXAlignment.Left
-		btn.ZIndex = 152
+		btn.ZIndex = 154
 
 		local ind = Instance.new("Frame", btn)
 		ind.Size = UDim2.new(0, 2, 0, 0)
@@ -509,7 +545,7 @@ local function ShowServerListUI(gatheredData)
 		ind.AnchorPoint = Vector2.new(0, 0.5)
 		ind.BackgroundColor3 = Color3.fromRGB(255, 75, 75)
 		ind.BorderSizePixel = 0
-		ind.ZIndex = 153
+		ind.ZIndex = 155
 
 		local function loadPlayers()
 			if selectedBtn == btn then return end
@@ -519,7 +555,7 @@ local function ShowServerListUI(gatheredData)
 			end
 			selectedBtn = btn
 			TweenService:Create(btn, fastTween, {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-			TweenService:Create(ind, fastTween, {Size = UDim2.new(0, 2, 0, 16)}):Play()
+			TweenService:Create(ind, fastTween, {Size = UDim2.new(0, 2, 0, 18)}):Play()
 			
 			for _, c in ipairs(right:GetChildren()) do
 				if c:IsA("Frame") then c:Destroy() end
@@ -527,15 +563,16 @@ local function ShowServerListUI(gatheredData)
 			
 			for _, pData in ipairs(players) do
 				local pf = Instance.new("Frame", right)
-				pf.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-				pf.ZIndex = 152
-				Instance.new("UICorner", pf).CornerRadius = UDim.new(0, 4)
+				pf.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+				pf.ZIndex = 154
+				Instance.new("UICorner", pf).CornerRadius = UDim.new(0, 6)
+				Instance.new("UIStroke", pf).Color = Color3.fromRGB(50, 50, 50)
 				
 				local av = Instance.new("ImageLabel", pf)
-				av.Size = UDim2.new(0, 60, 0, 60)
-				av.Position = UDim2.new(0.5, -30, 0, 15)
+				av.Size = UDim2.new(0, 64, 0, 64)
+				av.Position = UDim2.new(0.5, -32, 0, 15)
 				av.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-				av.ZIndex = 153
+				av.ZIndex = 155
 				Instance.new("UICorner", av).CornerRadius = UDim.new(1, 0)
 				task.spawn(function()
 					pcall(function() av.Image = Players:GetUserThumbnailAsync(pData.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150) end)
@@ -543,25 +580,38 @@ local function ShowServerListUI(gatheredData)
 
 				local nm = Instance.new("TextLabel", pf)
 				nm.Size = UDim2.new(1, -10, 0, 16)
-				nm.Position = UDim2.new(0, 5, 0, 85)
+				nm.Position = UDim2.new(0, 5, 0, 90)
 				nm.BackgroundTransparency = 1
 				nm.Text = pData.DisplayName
 				nm.TextColor3 = Color3.fromRGB(255, 255, 255)
 				nm.Font = Enum.Font.GothamMedium
 				nm.TextSize = 12
 				nm.TextTruncate = Enum.TextTruncate.AtEnd
-				nm.ZIndex = 153
+				nm.ZIndex = 155
 				
 				local unm = Instance.new("TextLabel", pf)
 				unm.Size = UDim2.new(1, -10, 0, 14)
-				unm.Position = UDim2.new(0, 5, 0, 105)
+				unm.Position = UDim2.new(0, 5, 0, 110)
 				unm.BackgroundTransparency = 1
 				unm.Text = "@" .. pData.Name
 				unm.TextColor3 = Color3.fromRGB(150, 150, 150)
 				unm.Font = Enum.Font.Gotham
 				unm.TextSize = 11
 				unm.TextTruncate = Enum.TextTruncate.AtEnd
-				unm.ZIndex = 153
+				unm.ZIndex = 155
+
+				local pBtn = Instance.new("TextButton", pf)
+				pBtn.Size = UDim2.new(1, 0, 1, 0)
+				pBtn.BackgroundTransparency = 1
+				pBtn.Text = ""
+				pBtn.ZIndex = 160
+				pBtn.MouseButton1Click:Connect(function()
+					RunGitScript("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/PlayerInfo.luau", {
+						UserId = pData.UserId,
+						Name = pData.Name,
+						DisplayName = pData.DisplayName
+					})
+				end)
 			end
 		end
 
@@ -570,7 +620,7 @@ local function ShowServerListUI(gatheredData)
 		count = count + 1
 	end
 	
-	TweenService:Create(main, smoothTween, {Size = UDim2.new(0, 600, 0, 400)}):Play()
+	TweenService:Create(main, smoothTween, {Size = UDim2.new(0, 600, 0, 480)}):Play()
 end
 
 local TracerContainer = Instance.new("Frame")
@@ -964,7 +1014,8 @@ local PaperAPI = {
 	TracerContainer = TracerContainer,
 	DoFastHop = DoFastHop,
 	ShowConfirmPrompt = ShowConfirmPrompt,
-	ShowServerListUI = ShowServerListUI
+	ShowServerListUI = ShowServerListUI,
+	RunGitScript = RunGitScript
 }
 
 local success, result = pcall(function()
@@ -1221,69 +1272,11 @@ task.spawn(function()
 	end
 end)
 
-task.spawn(function()
-	local LoaderPanel = Instance.new("Frame", ScreenGui)
-	LoaderPanel.AnchorPoint = Vector2.new(1, 1)
-	LoaderPanel.Position = UDim2.new(1, -20, 1, -20)
-	LoaderPanel.Size = UDim2.new(0, 280, 0, 80)
-	LoaderPanel.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
-	LoaderPanel.ClipsDescendants = true
-	LoaderPanel.ZIndex = 50
-	
-	local LCorner = Instance.new("UICorner", LoaderPanel)
-	LCorner.CornerRadius = UDim.new(0, 2)
-	local LStroke = Instance.new("UIStroke", LoaderPanel)
-	LStroke.Color = Color3.fromRGB(45, 45, 45)
-	
-	local LIcon = Instance.new("ImageLabel", LoaderPanel)
-	LIcon.AnchorPoint = Vector2.new(0.5, 0.5)
-	LIcon.Position = UDim2.new(0.5, 0, 0.5, -12)
-	LIcon.Size = UDim2.new(0, 24, 0, 24)
-	LIcon.BackgroundTransparency = 1
-	LIcon.Image = MAIN_ICON
-	LIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
-	LIcon.ImageTransparency = 1
-	LIcon.ZIndex = 51
-	
-	local LCredit1 = Instance.new("TextLabel", LoaderPanel)
-	LCredit1.AnchorPoint = Vector2.new(0.5, 0.5)
-	LCredit1.Position = UDim2.new(0.5, 0, 0.5, 10)
-	LCredit1.Size = UDim2.new(0, 200, 0, 14)
-	LCredit1.BackgroundTransparency = 1
-	LCredit1.Text = "created by"
-	LCredit1.TextColor3 = Color3.fromRGB(150, 150, 150)
-	LCredit1.Font = Enum.Font.Gotham
-	LCredit1.TextSize = 10
-	LCredit1.TextTransparency = 1
-	LCredit1.ZIndex = 51
-	
-	local LCredit2 = Instance.new("TextLabel", LoaderPanel)
-	LCredit2.AnchorPoint = Vector2.new(0.5, 0.5)
-	LCredit2.Position = UDim2.new(0.5, 0, 0.5, 24)
-	LCredit2.Size = UDim2.new(0, 200, 0, 14)
-	LCredit2.BackgroundTransparency = 1
-	LCredit2.Text = "slav / siv / rune"
-	LCredit2.TextColor3 = Color3.fromRGB(220, 220, 220)
-	LCredit2.Font = Enum.Font.GothamMedium
-	LCredit2.TextSize = 12
-	LCredit2.TextTransparency = 1
-	LCredit2.ZIndex = 51
+local env = getgenv and getgenv() or _G
+local showLoader = not env.PaperLoadedBefore
+env.PaperLoadedBefore = true
 
-	pcall(function()
-		TweenService:Create(LIcon, smoothTween, {ImageTransparency = 0}):Play()
-		task.wait(0.4)
-		TweenService:Create(LCredit1, smoothTween, {TextTransparency = 0}):Play()
-		TweenService:Create(LCredit2, smoothTween, {TextTransparency = 0}):Play()
-		task.wait(1.5)
-		TweenService:Create(LIcon, smoothTween, {ImageTransparency = 1}):Play()
-		TweenService:Create(LCredit1, smoothTween, {TextTransparency = 1}):Play()
-		TweenService:Create(LCredit2, smoothTween, {TextTransparency = 1}):Play()
-		task.wait(0.3)
-		TweenService:Create(LoaderPanel, smoothTween, {Size = UDim2.new(0, 280, 0, 0)}):Play()
-		task.wait(0.4)
-		LoaderPanel:Destroy()
-	end)
-	
+local function completeLoad()
 	loaded = true
 	HoverZone.Visible = true
 	Watermark.Visible = true
@@ -1304,4 +1297,73 @@ task.spawn(function()
 			task.spawn(function() PaperAPI.ShowServerListUI(dt.GatheredData) end)
 		end
 	end
-end)
+end
+
+if showLoader then
+	task.spawn(function()
+		local LoaderPanel = Instance.new("Frame", ScreenGui)
+		LoaderPanel.AnchorPoint = Vector2.new(1, 1)
+		LoaderPanel.Position = UDim2.new(1, -20, 1, -20)
+		LoaderPanel.Size = UDim2.new(0, 280, 0, 80)
+		LoaderPanel.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
+		LoaderPanel.ClipsDescendants = true
+		LoaderPanel.ZIndex = 50
+		
+		local LCorner = Instance.new("UICorner", LoaderPanel)
+		LCorner.CornerRadius = UDim.new(0, 2)
+		local LStroke = Instance.new("UIStroke", LoaderPanel)
+		LStroke.Color = Color3.fromRGB(45, 45, 45)
+		
+		local LIcon = Instance.new("ImageLabel", LoaderPanel)
+		LIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+		LIcon.Position = UDim2.new(0.5, 0, 0.5, -12)
+		LIcon.Size = UDim2.new(0, 24, 0, 24)
+		LIcon.BackgroundTransparency = 1
+		LIcon.Image = MAIN_ICON
+		LIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
+		LIcon.ImageTransparency = 1
+		LIcon.ZIndex = 51
+		
+		local LCredit1 = Instance.new("TextLabel", LoaderPanel)
+		LCredit1.AnchorPoint = Vector2.new(0.5, 0.5)
+		LCredit1.Position = UDim2.new(0.5, 0, 0.5, 10)
+		LCredit1.Size = UDim2.new(0, 200, 0, 14)
+		LCredit1.BackgroundTransparency = 1
+		LCredit1.Text = "created by"
+		LCredit1.TextColor3 = Color3.fromRGB(150, 150, 150)
+		LCredit1.Font = Enum.Font.Gotham
+		LCredit1.TextSize = 10
+		LCredit1.TextTransparency = 1
+		LCredit1.ZIndex = 51
+		
+		local LCredit2 = Instance.new("TextLabel", LoaderPanel)
+		LCredit2.AnchorPoint = Vector2.new(0.5, 0.5)
+		LCredit2.Position = UDim2.new(0.5, 0, 0.5, 24)
+		LCredit2.Size = UDim2.new(0, 200, 0, 14)
+		LCredit2.BackgroundTransparency = 1
+		LCredit2.Text = "slav / siv / rune"
+		LCredit2.TextColor3 = Color3.fromRGB(220, 220, 220)
+		LCredit2.Font = Enum.Font.GothamMedium
+		LCredit2.TextSize = 12
+		LCredit2.TextTransparency = 1
+		LCredit2.ZIndex = 51
+
+		pcall(function()
+			TweenService:Create(LIcon, smoothTween, {ImageTransparency = 0}):Play()
+			task.wait(0.4)
+			TweenService:Create(LCredit1, smoothTween, {TextTransparency = 0}):Play()
+			TweenService:Create(LCredit2, smoothTween, {TextTransparency = 0}):Play()
+			task.wait(1.5)
+			TweenService:Create(LIcon, smoothTween, {ImageTransparency = 1}):Play()
+			TweenService:Create(LCredit1, smoothTween, {TextTransparency = 1}):Play()
+			TweenService:Create(LCredit2, smoothTween, {TextTransparency = 1}):Play()
+			task.wait(0.3)
+			TweenService:Create(LoaderPanel, smoothTween, {Size = UDim2.new(0, 280, 0, 0)}):Play()
+			task.wait(0.4)
+			LoaderPanel:Destroy()
+		end)
+		completeLoad()
+	end)
+else
+	completeLoad()
+end
