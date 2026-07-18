@@ -1855,6 +1855,9 @@ function Baseline:PasteChunked(text)
 	if self.IsPasting then return end
 	self.IsPasting = true
 	self.IsTyping = true
+	
+	text = text:gsub("\r\n", "\n"):gsub("\r", "\n")
+	
 	local maxLength = self.CanvasGroup:GetAttribute("MaxLength")
 	if maxLength and maxLength > 0 then
 		local currentLength = utf8.len(self.CanvasGroup:GetAttribute("Text") or "") or 0
@@ -2225,9 +2228,7 @@ function Baseline:ProcessKey(keyCode, isShiftDown, isCtrlDown)
 			local prevLine = lineMap[currentLineIndex - 1]
 			local rEndPrev = prevLine.renderEndIdx or prevLine.endIdx
 			local subString = (prevLine.startIdx <= self.CursorIndex) and displayedText:sub(prevLine.startIdx, math.min(self.CursorIndex, rEndPrev)) or ""
-			local length = utf8.len(subString) or #subString
-			local charWidth = Utils.getTextSize("A", textSize, font, Vector2.new(10000, 10000)).X
-			local currentX = length * charWidth
+			local currentX = Utils.getTextSize(subString, textSize, font, Vector2.new(10000, 10000)).X
 			self.CursorIndex = self:GetClosestIndexInLine(prevLine, currentX, displayedText, textSize, font)
 		else
 			self.CursorIndex = 0
@@ -2251,9 +2252,7 @@ function Baseline:ProcessKey(keyCode, isShiftDown, isCtrlDown)
 			local currentLineObj = lineMap[currentLineIndex]
 			local rEndCur = currentLineObj.renderEndIdx or currentLineObj.endIdx
 			local subString = (currentLineObj.startIdx <= self.CursorIndex) and displayedText:sub(currentLineObj.startIdx, math.min(self.CursorIndex, rEndCur)) or ""
-			local length = utf8.len(subString) or #subString
-			local charWidth = Utils.getTextSize("A", textSize, font, Vector2.new(10000, 10000)).X
-			local currentX = length * charWidth
+			local currentX = Utils.getTextSize(subString, textSize, font, Vector2.new(10000, 10000)).X
 			self.CursorIndex = self:GetClosestIndexInLine(nextLine, currentX, displayedText, textSize, font)
 		else
 			self.CursorIndex = #displayedText
@@ -2545,7 +2544,6 @@ function Baseline:GetLineMap(text, textSize, font, limitVector)
 	end
 	if not isWrapped then
 		local maxWidth = 8
-		local charWidth = Utils.getTextSize("A", textSize, font, Vector2.new(10000, 10000)).X
 		for _, seg in ipairs(lineSegments) do
 			local rEnd = seg.renderEndIdx or seg.endIdx
 			local str = (seg.startIdx <= rEnd) and text:sub(seg.startIdx, rEnd) or ""
@@ -2553,12 +2551,10 @@ function Baseline:GetLineMap(text, textSize, font, limitVector)
 				local indentStr = str:match("^%s*") or ""
 				str = str .. "\n" .. indentStr .. "    ..."
 			end
-			local maxLineLen = 0
 			for line in string.gmatch(str .. "\n", "(.-)\n") do
-				if #line > maxLineLen then maxLineLen = #line end
+				local w = Utils.getTextSize(line, textSize, font, Vector2.new(10000, 10000)).X
+				if w > maxWidth then maxWidth = w end
 			end
-			local w = maxLineLen * charWidth
-			if w > maxWidth then maxWidth = w end
 		end
 		self.CachedDocumentWidth = maxWidth + 8
 	else
@@ -2568,19 +2564,23 @@ function Baseline:GetLineMap(text, textSize, font, limitVector)
 end
 
 function Baseline:GetClosestIndexInLine(lineData, targetX, text, textSize, font)
-	if targetX < 0 then targetX = 0 end
+	if targetX <= 0 then return lineData.startIdx - 1 end
 	local bestIndexFound = lineData.startIdx - 1
 	local minDistanceX = math.huge
 	local rEnd = lineData.renderEndIdx or lineData.endIdx
-	local charWidth = Utils.getTextSize("A", textSize, font, Vector2.new(10000, 10000)).X
+	
 	for index = lineData.startIdx - 1, rEnd do
 		local subString = (lineData.startIdx <= index) and text:sub(lineData.startIdx, index) or ""
-		local length = utf8.len(subString) or #subString
-		local textXSize = length * charWidth
+		local textXSize = Utils.getTextSize(subString, textSize, font, Vector2.new(10000, 10000)).X
+		
 		local distanceX = math.abs(textXSize - targetX)
 		if distanceX < minDistanceX then
 			minDistanceX = distanceX
 			bestIndexFound = index
+		end
+		
+		if textXSize > targetX + 40 then
+			break
 		end
 	end
 	return bestIndexFound
