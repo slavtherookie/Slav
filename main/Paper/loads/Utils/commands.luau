@@ -1,3 +1,4 @@
+
 local DEBUG_MODE = true
 
 local function DebugPrint(msg)
@@ -5,8 +6,6 @@ local function DebugPrint(msg)
         print("[Paper Debug] " .. tostring(msg))
     end
 end
-
-DebugPrint("Initializing commands.luau...")
 
 local PaperAPI = ...
 if not PaperAPI then
@@ -21,6 +20,7 @@ local SetWatermarkVisible = PaperAPI.SetWatermarkVisible
 local SetNotifsEnabled = PaperAPI.SetNotifsEnabled
 local TracerContainer = PaperAPI.TracerContainer
 local TargetGui = PaperAPI.TargetGui
+local RunGitScript = PaperAPI.RunGitScript
 
 local LocalCmdRegistry = {}
 
@@ -33,13 +33,9 @@ local function RegisterCommand(name, aliases, argHint, argType, description, cal
         Description = description
     })
     OriginalRegisterCommand(name, aliases, argHint, argType, description, function(args)
-        DebugPrint("Command Executed: " .. name .. " | Args: " .. table.concat(args, ", "))
         local success, err = pcall(callback, args)
         if not success then
-            DebugPrint("ERROR in command '" .. name .. "': " .. tostring(err))
-            if DEBUG_MODE then
-                Notify("Command Error", "Check console (F9) for details.")
-            end
+            if DEBUG_MODE then Notify("Command Error", "Check console (F9) for details.") end
         end
     end)
 end
@@ -760,44 +756,36 @@ RegisterCommand("bhop", {"bunnyhop"}, "", "none", "Autojumps", function()
     end)
 end)
 
-local function runGitScript(url, arg1, arg2)
-    local success, err = pcall(function()
-        local scriptFunc = loadstring(game:HttpGet(url))
-        if scriptFunc then scriptFunc(arg1, arg2) end
-    end)
-    if not success then Notify("Error", err) end
-end
-
 RegisterCommand("notepad", {"notes"}, "", "none", "Notepad editor", function()
     Notify("Loading", "Notepad...")
-    runGitScript("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/Notepad.luau")
+    RunGitScript("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/Notepad.luau")
 end)
 
 RegisterCommand("cmds", {"help"}, "", "none", "Commands UI", function()
     Notify("Loading", "Commands...")
-    runGitScript("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/cmds.luau", LocalCmdRegistry)
+    RunGitScript("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/cmds.luau", LocalCmdRegistry)
 end)
 
 RegisterCommand("info", {"whois"}, "[player]", "player", "Player info", function(args)
     local target = GetPlayer(args[2])
     if target then
         Notify("Loading", "Info...")
-        runGitScript("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/PlayerInfo.luau", target)
+        RunGitScript("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/PlayerInfo.luau", target)
     end
 end)
 
 RegisterCommand("bettersync", {"bsync"}, "[key]", "none", "Enables BetterSync", function(args)
     local key = args[2] or "G"
-    runGitScript("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/BetterSync.luau", "start", key)
+    RunGitScript("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/BetterSync.luau", "start", key)
 end)
 
 RegisterCommand("unbettersync", {"unbsync"}, "", "none", "Disables BetterSync", function()
-    runGitScript("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/BetterSync.luau", "cleanup")
+    RunGitScript("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/BetterSync.luau", "cleanup")
 end)
 
 RegisterCommand("remotespy", {"paperspy", "rspy", "pspy", "spy", "ppspy"}, "", "none", "Loads PaperSpy", function()
     Notify("Loading", "PaperSpy...")
-    runGitScript("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/PaperSpy.luau")
+    RunGitScript("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/PaperSpy.luau")
 end)
 
 RegisterCommand("follow", {}, "[player]", "player", "Follows player", function(args)
@@ -1094,14 +1082,10 @@ RegisterCommand("clearchams", {}, "", "none", "Removes Color ESP", function() ch
 RegisterCommand("find", {"join"}, "[userid/name]", "none", "Server hops to find player", function(args)
     local target = args[2]
     if not target then return end
-    DebugPrint("Find command initiated for: " .. tostring(target))
     if writefile then
         pcall(function() writefile("Paper_SearchData.json", HttpService:JSONEncode({Target = target, Visited = {}})) end)
         if PaperAPI and PaperAPI.DoFastHop then
-            DebugPrint("Calling DoFastHop API...")
             PaperAPI.DoFastHop()
-        else
-            DebugPrint("PaperAPI.DoFastHop is missing.")
         end
     else
         Notify("Error", "Executor does not support writefile.")
@@ -1112,96 +1096,77 @@ RegisterCommand("stopfind", {"stopjoin"}, "", "none", "Stops server hopping", fu
     if isfile and isfile("Paper_SearchData.json") then
         pcall(function() delfile("Paper_SearchData.json") end)
         Notify("Stopped", "Server hopping stopped.")
-        DebugPrint("Stopped searching. Deleted Paper_SearchData.json")
     end
 end)
 
 RegisterCommand("listserver", {"ls", "serverlist"}, "[jobid?]", "none", "Lists players in a server", function(args)
     local targetJobId = args[2]
-    DebugPrint("listserver command executed. Arg: " .. tostring(targetJobId))
-    
     if not targetJobId or targetJobId == "" then
-        DebugPrint("No JobId provided. Gathering current server players.")
         local playersList = {}
         for _, p in ipairs(Players:GetPlayers()) do
             table.insert(playersList, {UserId = p.UserId, Name = p.Name, DisplayName = p.DisplayName})
         end
         local currentJobId = game.JobId
-        if currentJobId == nil or currentJobId == "" then
-            currentJobId = "Studio/Local_Server"
-            DebugPrint("JobId is empty.")
-        end
+        if currentJobId == nil or currentJobId == "" then currentJobId = "Studio/Local_Server" end
 
-        DebugPrint("Players fetched: " .. #playersList)
         if PaperAPI and PaperAPI.ShowServerListUI then
             PaperAPI.ShowServerListUI({ [currentJobId] = playersList })
-            Notify("Scanner", "Showing current server.")
-        else
-            DebugPrint("ERROR: PaperAPI.ShowServerListUI is missing!")
-            Notify("Error", "UI API Missing!")
         end
     else
-        DebugPrint("Specific JobId provided: " .. targetJobId)
         if PaperAPI and PaperAPI.ShowConfirmPrompt then
             PaperAPI.ShowConfirmPrompt(
                 "Server Scanner", 
                 "Hop to specific server and return to here?\nJobId: " .. targetJobId,
                 function()
-                    DebugPrint("User confirmed hop to specific JobID.")
                     local root = getRoot(LocalPlayer.Character)
                     local pos = root and {X = root.Position.X, Y = root.Position.Y, Z = root.Position.Z} or nil
-                    
-                    local payload = {
-                        OriginalJobId = game.JobId,
-                        OriginalPosition = pos,
-                        ServersToVisit = {targetJobId},
-                        GatheredData = {}
-                    }
+                    local payload = {OriginalJobId = game.JobId, OriginalPosition = pos, ServersToVisit = {targetJobId}, GatheredData = {}}
                     pcall(function() writefile("Paper_ListServers.json", HttpService:JSONEncode(payload)) end)
                     if PaperAPI.DoFastHop then PaperAPI.DoFastHop() end
                 end
             )
-        else
-            DebugPrint("ERROR: PaperAPI.ShowConfirmPrompt is missing!")
-            Notify("Error", "UI API Missing!")
         end
     end
 end)
 
-RegisterCommand("listservers", {"scanall"}, "", "none", "Scans all servers via IP", function()
-    local subnets = {
-        "128.116.115.0/24", "128.116.116.0/24", "128.116.1.0/24", "128.116.63.0/24",
-        "128.116.95.0/24", "128.116.101.0/24", "128.116.48.0/24", "128.116.22.0/24",
-        "128.116.99.0/24", "128.116.45.0/24", "128.116.127.0/24", "128.116.102.0/24",
-        "128.116.53.0/24", "128.116.32.0/24", "128.116.33.0/24", "128.116.119.0/24",
-        "128.116.21.0/24", "128.116.4.0/24", "128.116.122.0/24", "128.116.5.0/24",
-        "128.116.44.0/24", "128.116.123.0/24", "128.116.31.0/24", "128.116.124.0/24",
-        "128.116.104.0/24", "128.116.55.0/24", "128.116.120.0/24", "128.116.50.0/24",
-        "128.116.97.0/24", "128.116.51.0/24", "128.116.30.0/24", "128.116.118.0/24",
-        "128.116.117.0/24", "209.206.42.0/24", "209.206.43.0/24"
-    }
+RegisterCommand("listservers", {"scanall"}, "", "none", "Scans all active servers", function()
+    local req = request or http_request or (syn and syn.request) or (fluxus and fluxus.request)
+    if not req then return Notify("Error", "Executor does not support HTTP requests.") end
+
+    Notify("Scanner", "Fetching active servers...")
 
     local serversToVisit = {}
-    for _, subnet in ipairs(subnets) do
-        local p1, p2, p3 = subnet:match("(%d+)%.(%d+)%.(%d+)%.")
-        if p1 and p2 and p3 then
-            for i = 1, 254 do
-                table.insert(serversToVisit, p1 .. "." .. p2 .. "." .. p3 .. "." .. i)
+    local cursor = ""
+    for i = 1, 10 do
+        local url = "https://games.roproxy.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"
+        if cursor ~= "" then url = url .. "&cursor=" .. cursor end
+        local res = req({Url = url, Method = "GET"})
+        if res and res.StatusCode == 200 then
+            local body = HttpService:JSONDecode(res.Body)
+            for _, srv in ipairs(body.data or {}) do
+                if srv.id and srv.playing and srv.playing > 0 and srv.id ~= game.JobId then
+                    table.insert(serversToVisit, srv.id)
+                end
             end
+            cursor = body.nextPageCursor
+            if not cursor or cursor == "" then break end
+        else
+            break
         end
     end
 
     if #serversToVisit == 0 then
-        return Notify("Scanner", "No IPs generated.")
+        return Notify("Scanner", "No other active servers found.")
     end
 
     if PaperAPI and PaperAPI.ShowConfirmPrompt then
         PaperAPI.ShowConfirmPrompt(
             "Scan All Servers",
-            "Generated " .. #serversToVisit .. " IP addresses to scan.\nProceed?",
+            "Found " .. #serversToVisit .. " active servers.\n\nYou will be seamlessly teleported to fetch everyone, then returned to exactly where you stand. Proceed?",
             function()
                 local root = getRoot(LocalPlayer.Character)
                 local pos = root and {X = root.Position.X, Y = root.Position.Y, Z = root.Position.Z} or nil
+
                 local payload = {
                     OriginalJobId = game.JobId,
                     OriginalPosition = pos,
@@ -1212,7 +1177,5 @@ RegisterCommand("listservers", {"scanall"}, "", "none", "Scans all servers via I
                 if PaperAPI.DoFastHop then PaperAPI.DoFastHop() end
             end
         )
-    else
-        Notify("Error", "UI API Missing!")
     end
 end)
