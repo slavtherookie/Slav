@@ -1174,58 +1174,139 @@ RegisterCommand("listserver", {"ls", "serverlist"}, "[jobid?]", "none", "Lists p
 end)
 
 -- FAST HOP: Scan ALL Servers
+-- Strategy: while the player is already in the game, we can use TeleportService:GetPlayerPlaceInstanceAsync
+-- on known online players (from presence API) to get their JobIds directly — much faster than paging
+-- through the public server list, and avoids 403s from roproxy.
 RegisterCommand("listservers", {"scanall"}, "", "none", "Scans all servers", function()
-    DebugPrint("listservers command executed. Preparing to fetch API...")
+    DebugPrint("listservers command executed.")
     local req = request or http_request or (syn and syn.request) or (fluxus and fluxus.request)
     if not req then 
         DebugPrint("No valid HTTP request function found for this executor.")
         return Notify("Error", "Executor does not support HTTP requests.") 
     end
 
-    Notify("Scanner", "Fetching server list via API...")
-    
+    Notify("Scanner", "Discovering servers (fast mode)...")
+
     local serversToVisit = {}
-    local cursor = ""
-    for page = 1, 3 do 
-        local url = "https://games.roproxy.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"
-        if cursor ~= "" then url = url .. "&cursor=" .. cursor end
-        DebugPrint("Requesting server list. URL: " .. url)
-        
-        local res = req({Url = url, Method = "GET"})
-        if res and res.StatusCode == 200 then
-            DebugPrint("API Request Success (Page " .. page .. ")")
+    local seenJobIds = { [game.JobId] = true } -- skip current server
+
+    -- ── FAST PATH: query online presence of all players in this game ──────────
+    -- We page through the game's player list using the Roblox presence API.
+    -- Each entry gives us a placeId + gameId (JobId) directly — no hopping needed
+    -- to gather the list.
+    local function fetchViaPresence()
+        DebugPrint("Fast path: fetching online players via presence API...")
+        local placeId = tostring(game.PlaceId)
+
+        -- Roblox presence API: POST /v2/presence/users
+        -- We first get a batch of userIds who are playing this game via the
+        -- games/{placeId}/servers endpoint. But since that 403'd, instead we
+        -- use the *friends* presence endpoint for the local player to seed the
+        -- list, then fall through to the API fallback for non-friends.
+        local friendsOk = false
+        pcall(function()
+            local friendsRes = req({
+                Url = "https://friends.roblox.com/v1/users/" .. tostring(LocalPlayer.UserId) .. "/friends/online",
+                Method = "GET",
+            })
+            if friendsRes and friendsRes.StatusCode == 200 then
+                local body = HttpService:JSONDecode(friendsRes.Body)
+                local userIds = {}
+                for _, entry in ipairs(body.data or {}) do
+                    -- entry.userPresenceType == 2 means InGame
+                    if entry.userPresenceType == 2 and tostring(entry.placeId) == placeId then
+                        table.insert(userIds, entry.userId or entry.id)
+                    end
+                end
+                DebugPrint("Friends in this game: " .. #userIds)
+                for _, uid in ipairs(userIds) do
+                    local ok, jobId = pcall(function()
+                        return TeleportService:GetPlayerPlaceInstanceAsync(uid)
+                    end)
+                    if ok and jobId and jobId ~= "" and not seenJobIds[jobId] then
+                        seenJobIds[jobId] = true
+                        table.insert(serversToVisit, jobId)
+                        DebugPrint("Discovered server via friend UID " .. uid .. ": " .. jobId)
+                    end
+                end
+                friendsOk = true
+            end
+        end)
+        return friendsOk
+    end
+
+    -- ── FALLBACK: page the public server list API ─────────────────────────────
+    local function fetchViaAPI()
+        DebugPrint("Fallback: fetching server list via public API...")
+        local cursor = ""
+        for page = 1, 5 do
+            -- Try roproxy first, then fall back to apis.roblox.com
+            local urls = {
+                "https://games.roproxy.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100",
+                "https://apis.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100",
+            }
+            if cursor ~= "" then
+                urls[1] = urls[1] .. "&cursor=" .. cursor
+                urls[2] = urls[2] .. "&cursor=" .. cursor
+            end
+
+            local res, usedUrl
+            for _, url in ipairs(urls) do
+                DebugPrint("Requesting: " .. url)
+                local r = req({Url = url, Method = "GET"})
+                if r and r.StatusCode == 200 then
+                    res = r
+                    usedUrl = url
+                    break
+                else
+                    DebugPrint("Failed (" .. tostring(r and r.StatusCode or "N/A") .. ") for: " .. url)
+                end
+            end
+
+            if not res then
+                DebugPrint("All API endpoints failed on page " .. page)
+                Notify("Error", "Server list API unavailable.")
+                break
+            end
+
+            DebugPrint("API page " .. page .. " OK via " .. tostring(usedUrl))
             local body = HttpService:JSONDecode(res.Body)
-            for _, srv in ipairs(body.data) do
-                if srv.id ~= game.JobId then
+            for _, srv in ipairs(body.data or {}) do
+                if srv.id and not seenJobIds[srv.id] then
+                    seenJobIds[srv.id] = true
                     table.insert(serversToVisit, srv.id)
                 end
             end
             cursor = body.nextPageCursor
-            if not cursor or cursor == "" then 
-                DebugPrint("No more pages.")
-                break 
+            if not cursor or cursor == "" then
+                DebugPrint("No more API pages.")
+                break
             end
-        else 
-            local code = res and tostring(res.StatusCode) or "N/A"
-            DebugPrint("API Request FAILED. Status Code: " .. code)
-            Notify("Error", "API request failed. Code: " .. code)
-            break 
         end
     end
-    
-    DebugPrint("Total servers found to visit: " .. #serversToVisit)
-    if #serversToVisit == 0 then return Notify("Scanner", "No other servers found to scan.") end
+
+    -- Run fast path first, then supplement with API if we got very few servers
+    fetchViaPresence()
+    if #serversToVisit < 3 then
+        -- Either not enough friends in-game or presence failed — run the API path
+        fetchViaAPI()
+    end
+
+    DebugPrint("Total unique servers to visit: " .. #serversToVisit)
+    if #serversToVisit == 0 then
+        return Notify("Scanner", "No other servers found to scan.")
+    end
 
     local estTime = math.ceil(#serversToVisit * 6 / 60)
     if PaperAPI and PaperAPI.ShowConfirmPrompt then
         PaperAPI.ShowConfirmPrompt(
-            "Scan All Servers", 
+            "Scan All Servers",
             "Found " .. #serversToVisit .. " other servers.\nEstimated time to scan: " .. estTime .. " minute(s).\n\nYou will be seamlessly teleported to fetch everyone, then returned to exactly where you stand. Proceed?",
             function()
                 DebugPrint("User confirmed all server scan.")
                 local root = getRoot(LocalPlayer.Character)
                 local pos = root and {X = root.Position.X, Y = root.Position.Y, Z = root.Position.Z} or nil
-                
+
                 local payload = {
                     OriginalJobId = game.JobId,
                     OriginalPosition = pos,
