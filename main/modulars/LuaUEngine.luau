@@ -1,3 +1,23 @@
+local Icons = {
+    Keyword = "rbxassetid://0",
+    Function = "rbxassetid://0",
+    Global = "rbxassetid://0",
+    Library = "rbxassetid://0",
+    Class = "rbxassetid://0",
+    Constructor = "rbxassetid://0",
+    Variable = "rbxassetid://0",
+    ScrollArrow = "rbxassetid://5279719038",
+    FindTopChevron = "rbxassetid://81817462736641",
+    FindBottomChevron = "rbxassetid://81817462736641",
+    FindPrev = "rbxassetid://123393842142851",
+    FindNext = "rbxassetid://71631858247362",
+    FindClose = "rbxassetid://80750399461762",
+    FindMatchCase = "rbxassetid://108524879613542",
+    FindWholeWord = "rbxassetid://137472614441080",
+    FindRegex = "rbxassetid://79087075619950",
+    Fold = "rbxassetid://5642383285"
+}
+
 local Baseline = {
     Instances = {},
     Clipboard = "" 
@@ -97,7 +117,6 @@ local KeyMaps = {
 }
 
 local Utils = {}
-
 Utils.AutocompleteKeywords = {}
 
 local function generateKeywords(list, typeName, iconId)
@@ -106,17 +125,17 @@ local function generateKeywords(list, typeName, iconId)
     end
 end
 
-generateKeywords({"and", "break", "do", "else", "elseif", "end", "false", "for", "function", "if", "in", "local", "nil", "not", "or", "repeat", "return", "then", "true", "until", "while"}, "Keyword", "rbxassetid://0")
-generateKeywords({"print", "warn", "error", "assert", "require"}, "Function", "rbxassetid://0")
-generateKeywords({"game", "workspace", "script", "shared", "_G", "plugin"}, "Global", "rbxassetid://0")
-generateKeywords({"math", "string", "table", "task", "coroutine", "os", "debug", "utf8"}, "Library", "rbxassetid://0")
-generateKeywords({"math.abs", "math.acos", "math.asin", "math.atan", "math.atan2", "math.ceil", "math.clamp", "math.cos", "math.cosh", "math.deg", "math.exp", "math.floor", "math.fmod", "math.frexp", "math.ldexp", "math.log", "math.log10", "math.max", "math.min", "math.modf", "math.noise", "math.pi", "math.pow", "math.rad", "math.random", "math.randomseed", "math.round", "math.sign", "math.sin", "math.sinh", "math.sqrt", "math.tan", "math.tanh"}, "Function", "rbxassetid://0")
-generateKeywords({"table.concat", "table.insert", "table.remove", "table.sort", "table.create", "table.find", "table.clear", "table.pack", "table.unpack", "table.foreach", "table.foreachi", "table.getn"}, "Function", "rbxassetid://0")
-generateKeywords({"string.byte", "string.char", "string.find", "string.format", "string.gmatch", "string.gsub", "string.len", "string.lower", "string.match", "string.pack", "string.packsize", "string.rep", "string.reverse", "string.split", "string.sub", "string.unpack", "string.upper"}, "Function", "rbxassetid://0")
-generateKeywords({"task.spawn", "task.defer", "task.delay", "task.wait", "task.cancel"}, "Function", "rbxassetid://0")
-generateKeywords({"coroutine.create", "coroutine.resume", "coroutine.running", "coroutine.status", "coroutine.wrap", "coroutine.yield", "coroutine.isyieldable", "coroutine.close"}, "Function", "rbxassetid://0")
-generateKeywords({"Instance", "Vector3", "Vector2", "CFrame", "Color3", "UDim2", "UDim", "Ray", "TweenInfo", "Enum", "ColorSequence", "NumberSequence", "NumberRange", "Rect", "Faces", "Axes"}, "Class", "rbxassetid://0")
-generateKeywords({"Instance.new", "Vector3.new", "Vector3.zero", "Vector3.one", "Vector3.xAxis", "Vector3.yAxis", "Vector3.zAxis", "Vector2.new", "Vector2.zero", "Vector2.one", "Vector2.xAxis", "Vector2.yAxis", "CFrame.new", "CFrame.Angles", "CFrame.lookAt", "CFrame.identity", "Color3.new", "Color3.fromRGB", "Color3.fromHSV", "Color3.fromHex", "UDim2.new", "UDim2.fromOffset", "UDim2.fromScale", "UDim.new", "TweenInfo.new", "Ray.new"}, "Constructor", "rbxassetid://0")
+generateKeywords({"and", "break", "do", "else", "elseif", "end", "false", "for", "function", "if", "in", "local", "nil", "not", "or", "repeat", "return", "then", "true", "until", "while"}, "Keyword", Icons.Keyword)
+generateKeywords({"print", "warn", "error", "assert", "require"}, "Function", Icons.Function)
+generateKeywords({"game", "workspace", "script", "shared", "_G", "plugin"}, "Global", Icons.Global)
+generateKeywords({"math", "string", "table", "task", "coroutine", "os", "debug", "utf8"}, "Library", Icons.Library)
+generateKeywords({"math.abs", "math.acos", "math.asin", "math.atan", "math.atan2", "math.ceil", "math.clamp", "math.cos", "math.cosh", "math.deg", "math.exp", "math.floor", "math.fmod", "math.frexp", "math.ldexp", "math.log", "math.log10", "math.max", "math.min", "math.modf", "math.noise", "math.pi", "math.pow", "math.rad", "math.random", "math.randomseed", "math.round", "math.sign", "math.sin", "math.sinh", "math.sqrt", "math.tan", "math.tanh"}, "Function", Icons.Function)
+generateKeywords({"table.concat", "table.insert", "table.remove", "table.sort", "table.create", "table.find", "table.clear", "table.pack", "table.unpack", "table.foreach", "table.foreachi", "table.getn"}, "Function", Icons.Function)
+generateKeywords({"string.byte", "string.char", "string.find", "string.format", "string.gmatch", "string.gsub", "string.len", "string.lower", "string.match", "string.pack", "string.packsize", "string.rep", "string.reverse", "string.split", "string.sub", "string.unpack", "string.upper"}, "Function", Icons.Function)
+generateKeywords({"task.spawn", "task.defer", "task.delay", "task.wait", "task.cancel"}, "Function", Icons.Function)
+generateKeywords({"coroutine.create", "coroutine.resume", "coroutine.running", "coroutine.status", "coroutine.wrap", "coroutine.yield", "coroutine.isyieldable", "coroutine.close"}, "Function", Icons.Function)
+generateKeywords({"Instance", "Vector3", "Vector2", "CFrame", "Color3", "UDim2", "UDim", "Ray", "TweenInfo", "Enum", "ColorSequence", "NumberSequence", "NumberRange", "Rect", "Faces", "Axes"}, "Class", Icons.Class)
+generateKeywords({"Instance.new", "Vector3.new", "Vector3.zero", "Vector3.one", "Vector3.xAxis", "Vector3.yAxis", "Vector3.zAxis", "Vector2.new", "Vector2.zero", "Vector2.one", "Vector2.xAxis", "Vector2.yAxis", "CFrame.new", "CFrame.Angles", "CFrame.lookAt", "CFrame.identity", "Color3.new", "Color3.fromRGB", "Color3.fromHSV", "Color3.fromHex", "UDim2.new", "UDim2.fromOffset", "UDim2.fromScale", "UDim.new", "TweenInfo.new", "Ray.new"}, "Constructor", Icons.Constructor)
 
 function Utils.getWordBeforeCursor(text, cursorIndex)
     local before = text:sub(1, cursorIndex)
@@ -250,7 +269,6 @@ ScrollBar.__index = ScrollBar
 
 local function makeArrowButton(parent, rotation, isVertical, bgColor, imgColor, bgTrans, strokeColor, strokeTrans)
     local SCROLLBAR_SIZE = 18
-    local ARROW_IMAGE = "rbxassetid://5279719038"
     local ARROW_COLOR = imgColor or Color3.fromRGB(160, 160, 160)
     local btn = Instance.new("ImageButton")
     btn.Size = isVertical and UDim2.new(1, 0, 0, SCROLLBAR_SIZE) or UDim2.new(0, SCROLLBAR_SIZE, 1, 0)
@@ -267,7 +285,7 @@ local function makeArrowButton(parent, rotation, isVertical, bgColor, imgColor, 
     icon.Size = UDim2.new(0, 12, 0, 12)
     icon.Position = UDim2.new(0.5, 0, 0.5, 0)
     icon.BackgroundTransparency = 1
-    icon.Image = ARROW_IMAGE
+    icon.Image = Icons.ScrollArrow
     icon.ImageColor3 = ARROW_COLOR
     icon.Rotation = rotation
     icon.ZIndex = 102
@@ -658,6 +676,7 @@ function Baseline.new(canvasGroup)
     self.AutocompleteScroll.Size = UDim2.new(1, 0, 1, 0)
     self.AutocompleteScroll.BackgroundTransparency = 1
     self.AutocompleteScroll.ScrollBarThickness = 2
+    self.AutocompleteScroll.ScrollBarImageTransparency = 1
     self.AutocompleteScroll.BorderSizePixel = 0
     self.AutocompleteScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
     self.AutocompleteScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
@@ -807,6 +826,7 @@ function Baseline.new(canvasGroup)
                 elseif input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter then
                     if match and match.word == word then
                         self:HideAutocomplete()
+                        return
                     else
                         if self:CommitAutocomplete() then return end
                     end
@@ -1080,7 +1100,7 @@ function Baseline:OpenFindUI()
         topChevron.AnchorPoint = Vector2.new(0.5, 0.5)
         topChevron.Rotation = 180
         topChevron.BackgroundTransparency = 1
-        topChevron.Image = "rbxassetid://81817462736641"
+        topChevron.Image = Icons.FindTopChevron
         topChevron.Parent = toggleExpandBtn
         
         local bottomChevron = Instance.new("ImageLabel")
@@ -1090,7 +1110,7 @@ function Baseline:OpenFindUI()
         bottomChevron.AnchorPoint = Vector2.new(0.5, 0.5)
         bottomChevron.Rotation = 180
         bottomChevron.BackgroundTransparency = 1
-        bottomChevron.Image = "rbxassetid://81817462736641"
+        bottomChevron.Image = Icons.FindBottomChevron
         bottomChevron.Parent = toggleExpandBtn
         
         local findBox = Instance.new("TextBox")
@@ -1118,7 +1138,7 @@ function Baseline:OpenFindUI()
         findPrevBtn.Size = UDim2.new(0, 20, 0, 20)
         findPrevBtn.Position = UDim2.new(0, 185, 0, 2)
         findPrevBtn.BackgroundTransparency = 1
-        findPrevBtn.Image = "rbxassetid://123393842142851"
+        findPrevBtn.Image = Icons.FindPrev
         findPrevBtn.Parent = row1Find
         
         local findNextBtn = Instance.new("ImageButton")
@@ -1126,7 +1146,7 @@ function Baseline:OpenFindUI()
         findNextBtn.Size = UDim2.new(0, 20, 0, 20)
         findNextBtn.Position = UDim2.new(0, 209, 0, 2)
         findNextBtn.BackgroundTransparency = 1
-        findNextBtn.Image = "rbxassetid://71631858247362"
+        findNextBtn.Image = Icons.FindNext
         findNextBtn.Parent = row1Find
         
         local closeBtn = Instance.new("ImageButton")
@@ -1134,7 +1154,7 @@ function Baseline:OpenFindUI()
         closeBtn.Size = UDim2.new(0, 20, 0, 20)
         closeBtn.Position = UDim2.new(0, 241, 0, 2)
         closeBtn.BackgroundTransparency = 1
-        closeBtn.Image = "rbxassetid://80750399461762"
+        closeBtn.Image = Icons.FindClose
         closeBtn.Parent = row1Find
         
         local row2Replace = Instance.new("Frame")
@@ -1190,7 +1210,7 @@ function Baseline:OpenFindUI()
         matchCaseBtn.Size = UDim2.new(0, 20, 0, 20)
         matchCaseBtn.Position = UDim2.new(0, 24, 0, 0)
         matchCaseBtn.BackgroundTransparency = 1
-        matchCaseBtn.Image = "rbxassetid://108524879613542"
+        matchCaseBtn.Image = Icons.FindMatchCase
         matchCaseBtn.Parent = row3Options
         
         local matchWholeWordBtn = Instance.new("ImageButton")
@@ -1198,7 +1218,7 @@ function Baseline:OpenFindUI()
         matchWholeWordBtn.Size = UDim2.new(0, 20, 0, 20)
         matchWholeWordBtn.Position = UDim2.new(0, 48, 0, 0)
         matchWholeWordBtn.BackgroundTransparency = 1
-        matchWholeWordBtn.Image = "rbxassetid://137472614441080"
+        matchWholeWordBtn.Image = Icons.FindWholeWord
         matchWholeWordBtn.Parent = row3Options
         
         local useRegexBtn = Instance.new("ImageButton")
@@ -1206,7 +1226,7 @@ function Baseline:OpenFindUI()
         useRegexBtn.Size = UDim2.new(0, 20, 0, 20)
         useRegexBtn.Position = UDim2.new(0, 72, 0, 0)
         useRegexBtn.BackgroundTransparency = 1
-        useRegexBtn.Image = "rbxassetid://79087075619950"
+        useRegexBtn.Image = Icons.FindRegex
         useRegexBtn.Parent = row3Options
         
         local showLabel = Instance.new("TextLabel")
@@ -1925,14 +1945,14 @@ function Baseline:RenderAutocomplete()
         btn.Size = UDim2.new(1, 0, 1, 0)
         btn.BackgroundTransparency = 1
         btn.Text = ""
-        btn.Parent = rowframe
+        btn.Parent = rowFrame
         local icon = Instance.new("ImageLabel")
         icon.Size = UDim2.new(0, 14, 0, 14)
         icon.Position = UDim2.new(0, 4, 0.5, 0)
         icon.AnchorPoint = Vector2.new(0, 0.5)
         icon.BackgroundTransparency = 1
         icon.Image = match.icon
-        icon.Parent = rowframe
+        icon.Parent = rowFrame
         local label = Instance.new("TextLabel")
         label.Size = UDim2.new(1, -28, 1, 0)
         label.Position = UDim2.new(0, 24, 0, 0)
@@ -1942,7 +1962,7 @@ function Baseline:RenderAutocomplete()
         label.Font = Enum.Font.RobotoMono
         label.TextSize = 14
         label.TextXAlignment = Enum.TextXAlignment.Left
-        label.Parent = rowframe
+        label.Parent = rowFrame
         btn.MouseButton1Click:Connect(function()
             self.AutocompleteIndex = i
             self:CommitAutocomplete()
@@ -2016,7 +2036,7 @@ function Baseline:UpdateAutocompleteUI()
     end
     
     for dWord, dType in pairs(dynamicMatches) do
-        addMatch(dWord, dType, "rbxassetid://0")
+        addMatch(dWord, dType, Icons.Variable)
     end
     
     for _, item in ipairs(Utils.AutocompleteKeywords) do
@@ -2025,6 +2045,11 @@ function Baseline:UpdateAutocompleteUI()
     end
     
     if #matches == 0 then
+        self:HideAutocomplete()
+        return
+    end
+
+    if #matches == 1 and matches[1].word == word then
         self:HideAutocomplete()
         return
     end
@@ -2068,6 +2093,7 @@ function Baseline:ProcessKey(keyCode, isShiftDown, isCtrlDown)
         elseif keyCode == Enum.KeyCode.Return or keyCode == Enum.KeyCode.KeypadEnter then
             if match and match.word == word then
                 self:HideAutocomplete()
+                return
             else
                 if self:CommitAutocomplete() then return end
             end
@@ -2788,7 +2814,7 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
                         if not foldBtn then
                             foldBtn = Instance.new("ImageButton")
                             foldBtn.BackgroundTransparency = 1
-                            foldBtn.Image = "rbxassetid://5642383285"
+                            foldBtn.Image = Icons.Fold
                             foldBtn.Size = UDim2.new(0, 16, 0, 16)
                             foldBtn.ZIndex = 12
                             foldBtn.Parent = self.LineNumbersInner
