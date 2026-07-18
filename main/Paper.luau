@@ -15,22 +15,14 @@ local teleportFunc = queue_on_teleport
 if teleportFunc then
 	local execStr = string.format([[
 		task.wait(2.5)
-
-		local success, result = pcall(game.HttpGet, game,
-			"https://raw.githubusercontent.com/%s/%s/%s/main/Paper.luau"
-		)
-
+		local success, result = pcall(game.HttpGet, game, "https://raw.githubusercontent.com/%s/%s/%s/main/Paper.luau")
 		if success and result then
 			local fn = loadstring(result)
-			if type(fn) == "function" then
-				fn()
-			end
+			if type(fn) == "function" then fn() end
 		end
 	]], creator, githubrepo, branch)
 
-	pcall(function()
-		teleportFunc(execStr)
-	end)
+	pcall(function() teleportFunc(execStr) end)
 end
 
 local Players = game:GetService("Players")
@@ -51,13 +43,107 @@ if targetGui:FindFirstChild(guiName) then
 	targetGui[guiName]:Destroy()
 end
 for _, v in ipairs(targetGui:GetChildren()) do
-	if v.Name == "Paper_ESP_GUI" then
+	if v.Name == "Paper_ESP_GUI" or v.Name == "PaperServerListGui" then
 		v:Destroy()
 	end
 end
 
 local smoothTween = TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 local fastTween = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+local function DoFastHop()
+	if not isfile or not readfile or not writefile or not delfile then return false end
+	local req = request or http_request or (syn and syn.request) or (fluxus and fluxus.request)
+
+	if isfile("Paper_SearchData.json") then
+		local data = HttpService:JSONDecode(readfile("Paper_SearchData.json"))
+		local target = data.Target
+		local found = false
+		for _, p in ipairs(Players:GetPlayers()) do
+			if string.lower(p.Name) == string.lower(target) or string.lower(p.DisplayName) == string.lower(target) or tostring(p.UserId) == string.lower(target) then
+				found = true; break
+			end
+		end
+		if found then
+			pcall(delfile, "Paper_SearchData.json")
+			pcall(function() game:GetService("StarterGui"):SetCore("SendNotification", {Title="Paper", Text="Found " .. target .. " in this server!"}) end)
+			return false 
+		end
+		
+		data.Visited[game.JobId] = true
+		pcall(writefile, "Paper_SearchData.json", HttpService:JSONEncode(data))
+		
+		if req then
+			local cursor = ""
+			local nextServer = nil
+			while not nextServer do
+				local url = "https://games.roproxy.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+				if cursor ~= "" then url = url .. "&cursor=" .. cursor end
+				local res = req({Url = url, Method = "GET"})
+				if res and res.StatusCode == 200 then
+					local body = HttpService:JSONDecode(res.Body)
+					for _, srv in ipairs(body.data) do
+						if srv.playing < srv.maxPlayers and not data.Visited[srv.id] and srv.id ~= game.JobId then
+							nextServer = srv.id; break
+						end
+					end
+					if nextServer then break end
+					cursor = body.nextPageCursor
+					if not cursor or cursor == "" then break end
+				else break end
+			end
+			if nextServer then
+				TeleportService:TeleportToPlaceInstance(game.PlaceId, nextServer, LocalPlayer)
+				return true
+			else
+				pcall(delfile, "Paper_SearchData.json")
+			end
+		end
+		return false
+	end
+
+	if isfile("Paper_ListServers.json") then
+		local data = HttpService:JSONDecode(readfile("Paper_ListServers.json"))
+		
+		local serverPlayers = {}
+		for _, p in ipairs(Players:GetPlayers()) do
+			table.insert(serverPlayers, {UserId = p.UserId, Name = p.Name, DisplayName = p.DisplayName})
+		end
+		data.GatheredData[game.JobId] = serverPlayers
+
+		if #data.ServersToVisit == 0 then
+			if game.JobId ~= data.OriginalJobId then
+				pcall(writefile, "Paper_ListServers.json", HttpService:JSONEncode(data))
+				TeleportService:TeleportToPlaceInstance(game.PlaceId, data.OriginalJobId, LocalPlayer)
+				return true 
+			end
+			return false 
+		end
+
+		local nextServer = data.ServersToVisit[1]
+		table.remove(data.ServersToVisit, 1)
+		pcall(writefile, "Paper_ListServers.json", HttpService:JSONEncode(data))
+		TeleportService:TeleportToPlaceInstance(game.PlaceId, nextServer, LocalPlayer)
+		return true
+	end
+	return false
+end
+
+if isfile then
+	local isHopping = false
+	if isfile("Paper_SearchData.json") then isHopping = true end
+	if isfile("Paper_ListServers.json") then
+		local ds, dt = pcall(function() return HttpService:JSONDecode(readfile("Paper_ListServers.json")) end)
+		if ds and dt and (#dt.ServersToVisit > 0 or game.JobId ~= dt.OriginalJobId) then
+			isHopping = true
+		end
+	end
+	if isHopping then
+		if not game:IsLoaded() then game.Loaded:Wait() end
+		task.wait(1.5)
+		if DoFastHop() then return end 
+	end
+end
 
 local loaded = false
 local notifsEnabled = true
@@ -106,19 +192,13 @@ local function GetPlayerFromQuery(query)
 	query = string.lower(query or "")
 	if query == "" then return nil end
 	for _, p in ipairs(Players:GetPlayers()) do
-		if string.lower(p.Name) == query or string.lower(p.DisplayName) == query or tostring(p.UserId) == query then
-			return p
-		end
+		if string.lower(p.Name) == query or string.lower(p.DisplayName) == query or tostring(p.UserId) == query then return p end
 	end
 	for _, p in ipairs(Players:GetPlayers()) do
-		if string.sub(string.lower(p.Name), 1, #query) == query or string.sub(string.lower(p.DisplayName), 1, #query) == query then
-			return p
-		end
+		if string.sub(string.lower(p.Name), 1, #query) == query or string.sub(string.lower(p.DisplayName), 1, #query) == query then return p end
 	end
 	for _, p in ipairs(Players:GetPlayers()) do
-		if string.find(string.lower(p.Name), query) or string.find(string.lower(p.DisplayName), query) then
-			return p
-		end
+		if string.find(string.lower(p.Name), query) or string.find(string.lower(p.DisplayName), query) then return p end
 	end
 	return nil
 end
@@ -133,10 +213,11 @@ local function CreateLargeNotification(titleText, descText, iconId)
 	local bg = Instance.new("Frame", ScreenGui)
 	bg.AnchorPoint = Vector2.new(0.5, 0.5)
 	bg.Position = UDim2.new(0.5, 0, 0.5, 0)
-	bg.Size = UDim2.new(0, 400, 0, 250)
+	bg.Size = UDim2.new(0, 400, 0, 0)
 	bg.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+	bg.ClipsDescendants = true
 	bg.Active = true
-	bg.ZIndex = 150
+	bg.ZIndex = 200
 
 	local uic = Instance.new("UICorner", bg)
 	uic.CornerRadius = UDim.new(0, 4)
@@ -146,12 +227,14 @@ local function CreateLargeNotification(titleText, descText, iconId)
 	local top = Instance.new("Frame", bg)
 	top.Size = UDim2.new(1, 0, 0, 30)
 	top.BackgroundTransparency = 1
+	top.ZIndex = 201
 
 	local icon = Instance.new("ImageLabel", top)
 	icon.Size = UDim2.new(0, 16, 0, 16)
 	icon.Position = UDim2.new(0, 10, 0.5, -8)
 	icon.BackgroundTransparency = 1
 	icon.Image = iconId
+	icon.ZIndex = 202
 
 	local lbl = Instance.new("TextLabel", top)
 	lbl.Size = UDim2.new(1, -60, 1, 0)
@@ -162,6 +245,7 @@ local function CreateLargeNotification(titleText, descText, iconId)
 	lbl.Font = Enum.Font.GothamMedium
 	lbl.TextSize = 14
 	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.ZIndex = 202
 
 	local cbtn = Instance.new("ImageButton", top)
 	cbtn.Size = UDim2.new(0, 16, 0, 16)
@@ -169,7 +253,7 @@ local function CreateLargeNotification(titleText, descText, iconId)
 	cbtn.BackgroundTransparency = 1
 	cbtn.Image = CLOSE_ICON
 	cbtn.ImageColor3 = Color3.fromRGB(180, 180, 180)
-	cbtn.MouseButton1Click:Connect(function() bg:Destroy() end)
+	cbtn.ZIndex = 202
 
 	local scroll = Instance.new("ScrollingFrame", bg)
 	scroll.Size = UDim2.new(1, -20, 1, -40)
@@ -178,6 +262,7 @@ local function CreateLargeNotification(titleText, descText, iconId)
 	scroll.ScrollBarThickness = 4
 	scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	scroll.ZIndex = 201
 
 	local tbox = Instance.new("TextLabel", scroll)
 	tbox.Size = UDim2.new(1, -10, 0, 0)
@@ -190,24 +275,28 @@ local function CreateLargeNotification(titleText, descText, iconId)
 	tbox.TextXAlignment = Enum.TextXAlignment.Left
 	tbox.TextYAlignment = Enum.TextYAlignment.Top
 	tbox.AutomaticSize = Enum.AutomaticSize.Y
+	tbox.ZIndex = 202
+
+	local closed = false
+	local function closeUI()
+		if closed then return end
+		closed = true
+		TweenService:Create(bg, smoothTween, {Size = UDim2.new(0, 400, 0, 0)}):Play()
+		task.delay(0.4, function() pcall(function() bg:Destroy() end) end)
+	end
+	cbtn.MouseButton1Click:Connect(closeUI)
 
 	local drag, dInput, dStart, sPos
 	top.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			drag = true
-			dStart = input.Position
-			sPos = bg.Position
+			drag = true; dStart = input.Position; sPos = bg.Position
 		end
 	end)
 	top.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			drag = false
-		end
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then drag = false end
 	end)
 	top.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-			dInput = input
-		end
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dInput = input end
 	end)
 	local dConn = UserInputService.InputChanged:Connect(function(input)
 		if input == dInput and drag then
@@ -215,9 +304,273 @@ local function CreateLargeNotification(titleText, descText, iconId)
 			bg.Position = UDim2.new(sPos.X.Scale, sPos.X.Offset + delta.X, sPos.Y.Scale, sPos.Y.Offset + delta.Y)
 		end
 	end)
-	bg.Destroying:Connect(function()
-		if dConn then dConn:Disconnect() end
+	bg.Destroying:Connect(function() if dConn then dConn:Disconnect() end end)
+
+	TweenService:Create(bg, smoothTween, {Size = UDim2.new(0, 400, 0, 250)}):Play()
+end
+
+local function ShowConfirmPrompt(title, desc, onConfirm)
+	local PromptGui = Instance.new("ScreenGui", targetGui)
+	PromptGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	
+	local bg = Instance.new("Frame", PromptGui)
+	bg.AnchorPoint = Vector2.new(0.5, 0.5)
+	bg.Position = UDim2.new(0.5, 0, 0.5, 0)
+	bg.Size = UDim2.new(0, 320, 0, 0)
+	bg.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+	bg.ClipsDescendants = true
+	bg.ZIndex = 250
+	Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 4)
+	Instance.new("UIStroke", bg).Color = Color3.fromRGB(60, 60, 60)
+
+	local titleLbl = Instance.new("TextLabel", bg)
+	titleLbl.Size = UDim2.new(1, 0, 0, 40)
+	titleLbl.BackgroundTransparency = 1
+	titleLbl.Text = title
+	titleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+	titleLbl.Font = Enum.Font.GothamMedium
+	titleLbl.TextSize = 15
+	titleLbl.ZIndex = 251
+
+	local descLbl = Instance.new("TextLabel", bg)
+	descLbl.Size = UDim2.new(1, -30, 0, 60)
+	descLbl.Position = UDim2.new(0, 15, 0, 40)
+	descLbl.BackgroundTransparency = 1
+	descLbl.Text = desc
+	descLbl.TextColor3 = Color3.fromRGB(180, 180, 180)
+	descLbl.Font = Enum.Font.Gotham
+	descLbl.TextSize = 13
+	descLbl.TextWrapped = true
+	descLbl.TextYAlignment = Enum.TextYAlignment.Top
+	descLbl.ZIndex = 251
+
+	local yesBtn = Instance.new("TextButton", bg)
+	yesBtn.Size = UDim2.new(0, 100, 0, 30)
+	yesBtn.Position = UDim2.new(0.5, -110, 1, -45)
+	yesBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	yesBtn.Text = "Yes"
+	yesBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	yesBtn.Font = Enum.Font.GothamMedium
+	yesBtn.TextSize = 13
+	yesBtn.ZIndex = 251
+	Instance.new("UICorner", yesBtn).CornerRadius = UDim.new(0, 3)
+
+	local noBtn = Instance.new("TextButton", bg)
+	noBtn.Size = UDim2.new(0, 100, 0, 30)
+	noBtn.Position = UDim2.new(0.5, 10, 1, -45)
+	noBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	noBtn.Text = "No"
+	noBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	noBtn.Font = Enum.Font.GothamMedium
+	noBtn.TextSize = 13
+	noBtn.ZIndex = 251
+	Instance.new("UICorner", noBtn).CornerRadius = UDim.new(0, 3)
+
+	local isClosing = false
+	local function closePrompt(cb)
+		if isClosing then return end
+		isClosing = true
+		TweenService:Create(bg, smoothTween, {Size = UDim2.new(0, 320, 0, 0)}):Play()
+		task.delay(0.4, function()
+			PromptGui:Destroy()
+			if cb then cb() end
+		end)
+	end
+
+	yesBtn.MouseButton1Click:Connect(function() closePrompt(onConfirm) end)
+	noBtn.MouseButton1Click:Connect(function() closePrompt() end)
+
+	TweenService:Create(bg, smoothTween, {Size = UDim2.new(0, 320, 0, 160)}):Play()
+end
+
+local function ShowServerListUI(gatheredData)
+	local sg = Instance.new("ScreenGui", targetGui)
+	sg.Name = "PaperServerListGui"
+	sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+	local main = Instance.new("Frame", sg)
+	main.Size = UDim2.new(0, 600, 0, 0)
+	main.Position = UDim2.new(0.5, -300, 0.5, -200)
+	main.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
+	main.ClipsDescendants = true
+	main.Active = true
+	main.ZIndex = 150
+	Instance.new("UICorner", main).CornerRadius = UDim.new(0, 4)
+	Instance.new("UIStroke", main).Color = Color3.fromRGB(45, 45, 45)
+
+	local topDrag = Instance.new("TextButton", main)
+	topDrag.Size = UDim2.new(1, -40, 0, 35)
+	topDrag.BackgroundTransparency = 1
+	topDrag.Text = ""
+	topDrag.ZIndex = 155
+	
+	local titleLbl = Instance.new("TextLabel", main)
+	titleLbl.Size = UDim2.new(0, 300, 0, 35)
+	titleLbl.Position = UDim2.new(0, 14, 0, 0)
+	titleLbl.BackgroundTransparency = 1
+	titleLbl.Text = "Server Scanner Results"
+	titleLbl.TextColor3 = Color3.fromRGB(240, 240, 240)
+	titleLbl.Font = Enum.Font.GothamMedium
+	titleLbl.TextSize = 13
+	titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+	titleLbl.ZIndex = 151
+
+	local cbtn = Instance.new("ImageButton", main)
+	cbtn.Size = UDim2.new(0, 16, 0, 16)
+	cbtn.Position = UDim2.new(1, -24, 0, 9)
+	cbtn.BackgroundTransparency = 1
+	cbtn.Image = CLOSE_ICON
+	cbtn.ImageColor3 = Color3.fromRGB(180, 180, 180)
+	cbtn.ZIndex = 155
+
+	local isClosing = false
+	cbtn.MouseButton1Click:Connect(function()
+		if isClosing then return end
+		isClosing = true
+		TweenService:Create(main, smoothTween, {Size = UDim2.new(0, 600, 0, 0)}):Play()
+		task.delay(0.4, function() sg:Destroy() end)
 	end)
+
+	local sep = Instance.new("Frame", main)
+	sep.Size = UDim2.new(1, 0, 0, 1)
+	sep.Position = UDim2.new(0, 0, 0, 35)
+	sep.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	sep.BorderSizePixel = 0
+	sep.ZIndex = 151
+
+	local left = Instance.new("ScrollingFrame", main)
+	left.Size = UDim2.new(0, 180, 1, -36)
+	left.Position = UDim2.new(0, 0, 0, 36)
+	left.BackgroundTransparency = 1
+	left.ScrollBarThickness = 2
+	left.ZIndex = 151
+	local lLayout = Instance.new("UIListLayout", left)
+	lLayout.Padding = UDim.new(0, 2)
+	lLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() left.CanvasSize = UDim2.new(0,0,0,lLayout.AbsoluteContentSize.Y) end)
+
+	local vSep = Instance.new("Frame", main)
+	vSep.Size = UDim2.new(0, 1, 1, -36)
+	vSep.Position = UDim2.new(0, 180, 0, 36)
+	vSep.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	vSep.BorderSizePixel = 0
+	vSep.ZIndex = 151
+
+	local right = Instance.new("ScrollingFrame", main)
+	right.Size = UDim2.new(1, -181, 1, -36)
+	right.Position = UDim2.new(0, 181, 0, 36)
+	right.BackgroundTransparency = 1
+	right.ScrollBarThickness = 4
+	right.ZIndex = 151
+	local rLayout = Instance.new("UIGridLayout", right)
+	rLayout.CellSize = UDim2.new(0, 100, 0, 130)
+	rLayout.CellPadding = UDim2.new(0, 10, 0, 10)
+	rLayout.FillDirectionMaxCells = 3
+	rLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() right.CanvasSize = UDim2.new(0,0,0,rLayout.AbsoluteContentSize.Y + 20) end)
+	local rPad = Instance.new("UIPadding", right)
+	rPad.PaddingTop = UDim.new(0, 10)
+	rPad.PaddingLeft = UDim.new(0, 10)
+
+	local dragging, dInput, dStart, sPos
+	topDrag.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true; dStart = input.Position; sPos = main.Position
+		end
+	end)
+	topDrag.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+	end)
+	topDrag.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dInput = input end
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		if input == dInput and dragging then
+			local delta = input.Position - dStart
+			main.Position = UDim2.new(sPos.X.Scale, sPos.X.Offset + delta.X, sPos.Y.Scale, sPos.Y.Offset + delta.Y)
+		end
+	end)
+
+	local selectedBtn = nil
+	local count = 1
+	for jobId, players in pairs(gatheredData) do
+		local btn = Instance.new("TextButton", left)
+		btn.Size = UDim2.new(1, 0, 0, 30)
+		btn.BackgroundTransparency = 1
+		local dispId = (jobId == game.JobId) and "Current Server" or ("Server " .. count)
+		btn.Text = "  " .. dispId .. " (" .. #players .. ")"
+		btn.TextColor3 = Color3.fromRGB(160, 160, 160)
+		btn.Font = Enum.Font.GothamMedium
+		btn.TextSize = 12
+		btn.TextXAlignment = Enum.TextXAlignment.Left
+		btn.ZIndex = 152
+
+		local ind = Instance.new("Frame", btn)
+		ind.Size = UDim2.new(0, 2, 0, 0)
+		ind.Position = UDim2.new(0, 0, 0.5, 0)
+		ind.AnchorPoint = Vector2.new(0, 0.5)
+		ind.BackgroundColor3 = Color3.fromRGB(255, 75, 75)
+		ind.BorderSizePixel = 0
+		ind.ZIndex = 153
+
+		local function loadPlayers()
+			if selectedBtn == btn then return end
+			if selectedBtn then
+				TweenService:Create(selectedBtn, fastTween, {TextColor3 = Color3.fromRGB(160, 160, 160)}):Play()
+				TweenService:Create(selectedBtn:FindFirstChild("Frame"), fastTween, {Size = UDim2.new(0, 2, 0, 0)}):Play()
+			end
+			selectedBtn = btn
+			TweenService:Create(btn, fastTween, {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+			TweenService:Create(ind, fastTween, {Size = UDim2.new(0, 2, 0, 16)}):Play()
+			
+			for _, c in ipairs(right:GetChildren()) do
+				if c:IsA("Frame") then c:Destroy() end
+			end
+			
+			for _, pData in ipairs(players) do
+				local pf = Instance.new("Frame", right)
+				pf.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+				pf.ZIndex = 152
+				Instance.new("UICorner", pf).CornerRadius = UDim.new(0, 4)
+				
+				local av = Instance.new("ImageLabel", pf)
+				av.Size = UDim2.new(0, 60, 0, 60)
+				av.Position = UDim2.new(0.5, -30, 0, 15)
+				av.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+				av.ZIndex = 153
+				Instance.new("UICorner", av).CornerRadius = UDim.new(1, 0)
+				task.spawn(function()
+					pcall(function() av.Image = Players:GetUserThumbnailAsync(pData.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150) end)
+				end)
+
+				local nm = Instance.new("TextLabel", pf)
+				nm.Size = UDim2.new(1, -10, 0, 16)
+				nm.Position = UDim2.new(0, 5, 0, 85)
+				nm.BackgroundTransparency = 1
+				nm.Text = pData.DisplayName
+				nm.TextColor3 = Color3.fromRGB(255, 255, 255)
+				nm.Font = Enum.Font.GothamMedium
+				nm.TextSize = 12
+				nm.TextTruncate = Enum.TextTruncate.AtEnd
+				nm.ZIndex = 153
+				
+				local unm = Instance.new("TextLabel", pf)
+				unm.Size = UDim2.new(1, -10, 0, 14)
+				unm.Position = UDim2.new(0, 5, 0, 105)
+				unm.BackgroundTransparency = 1
+				unm.Text = "@" .. pData.Name
+				unm.TextColor3 = Color3.fromRGB(150, 150, 150)
+				unm.Font = Enum.Font.Gotham
+				unm.TextSize = 11
+				unm.TextTruncate = Enum.TextTruncate.AtEnd
+				unm.ZIndex = 153
+			end
+		end
+
+		btn.MouseButton1Click:Connect(loadPlayers)
+		if count == 1 then loadPlayers() end
+		count = count + 1
+	end
+	
+	TweenService:Create(main, smoothTween, {Size = UDim2.new(0, 600, 0, 400)}):Play()
 end
 
 local TracerContainer = Instance.new("Frame")
@@ -236,7 +589,7 @@ Tooltip.Font = Enum.Font.GothamMedium
 Tooltip.TextSize = 11
 Tooltip.TextTransparency = 1
 Tooltip.BackgroundTransparency = 1
-Tooltip.ZIndex = 100
+Tooltip.ZIndex = 300
 Tooltip.AnchorPoint = Vector2.new(0, 1)
 
 local TooltipCorner = Instance.new("UICorner", Tooltip)
@@ -282,6 +635,7 @@ Watermark.Font = Enum.Font.GothamMedium
 Watermark.TextSize = 13
 Watermark.TextXAlignment = Enum.TextXAlignment.Left
 Watermark.Visible = false
+Watermark.ZIndex = 5
 
 local WatermarkStroke = Instance.new("UIStroke", Watermark)
 WatermarkStroke.Color = Color3.fromRGB(40, 40, 40)
@@ -294,6 +648,7 @@ NotifContainer.AnchorPoint = Vector2.new(1, 1)
 NotifContainer.Position = UDim2.new(1, -20, 1, -20)
 NotifContainer.Size = UDim2.new(0, 240, 0.8, 0)
 NotifContainer.BackgroundTransparency = 1
+NotifContainer.ZIndex = 150 
 
 local NotifLayout = Instance.new("UIListLayout", NotifContainer)
 NotifLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -306,6 +661,7 @@ SuggestionsContainer.AnchorPoint = Vector2.new(0, 1)
 SuggestionsContainer.BackgroundTransparency = 1
 SuggestionsContainer.ClipsDescendants = true
 SuggestionsContainer.AutomaticSize = Enum.AutomaticSize.Y
+SuggestionsContainer.ZIndex = 10
 
 local SuggestionsLayout = Instance.new("UIListLayout", SuggestionsContainer)
 SuggestionsLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -322,9 +678,7 @@ local function UpdateNotifPosition()
 			local baseHeight = settingsOpen and 100 or 42
 			if (isFocused or isHovered or settingsOpen) then
 				targetY = -(baseHeight + 26)
-				if SuggestionsContainer.AbsoluteSize.Y > 0 then
-					targetY = targetY - SuggestionsContainer.AbsoluteSize.Y
-				end
+				if SuggestionsContainer.AbsoluteSize.Y > 0 then targetY = targetY - SuggestionsContainer.AbsoluteSize.Y end
 			end
 		end
 	end
@@ -332,7 +686,6 @@ local function UpdateNotifPosition()
 end
 
 SuggestionsContainer:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateNotifPosition)
-
 suggConn = RunService.RenderStepped:Connect(function()
 	if MainPanel then
 		SuggestionsContainer.Position = UDim2.new(0, MainPanel.AbsolutePosition.X, 0, MainPanel.AbsolutePosition.Y - 6)
@@ -347,6 +700,7 @@ local function Notify(title, text, iconId)
 	Frame.Size = UDim2.new(1, 0, 0, 0)
 	Frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 	Frame.ClipsDescendants = true
+	Frame.ZIndex = 151
 	
 	local Corner = Instance.new("UICorner", Frame)
 	Corner.CornerRadius = UDim.new(0, 2)
@@ -359,6 +713,7 @@ local function Notify(title, text, iconId)
 	Icon.Size = UDim2.new(0, 24, 0, 24)
 	Icon.BackgroundTransparency = 1
 	Icon.Image = iconId
+	Icon.ZIndex = 152
 	
 	local Title = Instance.new("TextLabel", Frame)
 	Title.Position = UDim2.new(0, 46, 0, 10)
@@ -369,6 +724,7 @@ local function Notify(title, text, iconId)
 	Title.Font = Enum.Font.GothamMedium
 	Title.TextSize = 13
 	Title.TextXAlignment = Enum.TextXAlignment.Left
+	Title.ZIndex = 152
 	
 	local Desc = Instance.new("TextLabel", Frame)
 	Desc.Position = UDim2.new(0, 46, 0, 28)
@@ -380,17 +736,15 @@ local function Notify(title, text, iconId)
 	Desc.TextSize = 11
 	Desc.TextWrapped = true
 	Desc.TextXAlignment = Enum.TextXAlignment.Left
+	Desc.ZIndex = 152
 
 	local ClickArea = Instance.new("TextButton", Frame)
 	ClickArea.Size = UDim2.new(1, -30, 1, 0)
-	ClickArea.Position = UDim2.new(0, 0, 0, 0)
 	ClickArea.BackgroundTransparency = 1
 	ClickArea.Text = ""
-	ClickArea.ZIndex = 5
+	ClickArea.ZIndex = 155
 	ClickArea.MouseButton1Click:Connect(function()
-		if string.lower(title) == "error" then
-			CreateLargeNotification(title, text, iconId)
-		end
+		if string.lower(title) == "error" then CreateLargeNotification(title, text, iconId) end
 	end)
 	
 	local CloseBtn = Instance.new("ImageButton", Frame)
@@ -400,7 +754,7 @@ local function Notify(title, text, iconId)
 	CloseBtn.BackgroundTransparency = 1
 	CloseBtn.Image = CLOSE_ICON
 	CloseBtn.ImageColor3 = Color3.fromRGB(180, 180, 180)
-	CloseBtn.ZIndex = 6
+	CloseBtn.ZIndex = 156
 	
 	local closed = false
 	local function closeNotif()
@@ -409,23 +763,22 @@ local function Notify(title, text, iconId)
 		pcall(function() TweenService:Create(Frame, smoothTween, {Size = UDim2.new(1, 0, 0, 0)}):Play() end)
 		task.delay(0.4, function() pcall(function() Frame:Destroy() end) end)
 	end
-	
 	CloseBtn.MouseButton1Click:Connect(closeNotif)
 	CloseBtn.MouseEnter:Connect(function() pcall(function() TweenService:Create(CloseBtn, fastTween, {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play() end) end)
 	CloseBtn.MouseLeave:Connect(function() pcall(function() TweenService:Create(CloseBtn, fastTween, {ImageColor3 = Color3.fromRGB(180, 180, 180)}):Play() end) end)
-	AddTooltip(CloseBtn, "Dismiss")
 	
 	pcall(function() TweenService:Create(Frame, smoothTween, {Size = UDim2.new(1, 0, 0, 56)}):Play() end)
 	task.delay(6, closeNotif)
 end
 
-local HoverZone = Instance.new("Frame", ScreenGui)
+HoverZone = Instance.new("Frame", ScreenGui)
 HoverZone.AnchorPoint = Vector2.new(1, 1)
 HoverZone.Position = UDim2.new(1, 0, 1, 0)
 HoverZone.Size = UDim2.new(0, 320, 0, 100)
 HoverZone.BackgroundTransparency = 1
 HoverZone.Active = true
 HoverZone.Visible = false
+HoverZone.ZIndex = 1
 
 MainPanel = Instance.new("Frame", ScreenGui)
 MainPanel.AnchorPoint = Vector2.new(1, 1)
@@ -434,6 +787,7 @@ MainPanel.Size = UDim2.new(0, 280, 0, 42)
 MainPanel.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
 MainPanel.ClipsDescendants = true
 MainPanel.Active = true
+MainPanel.ZIndex = 10
 
 local PanelCorner = Instance.new("UICorner", MainPanel)
 PanelCorner.CornerRadius = UDim.new(0, 2)
@@ -445,6 +799,7 @@ ExpandedContent.Size = UDim2.new(1, 0, 1, -42)
 ExpandedContent.Position = UDim2.new(0, 0, 0, 0)
 ExpandedContent.BackgroundTransparency = 1
 ExpandedContent.GroupTransparency = 1
+ExpandedContent.ZIndex = 11
 
 local CommandScroll = Instance.new("ScrollingFrame", ExpandedContent)
 CommandScroll.Size = UDim2.new(1, -12, 1, -12)
@@ -461,6 +816,7 @@ BottomBar.AnchorPoint = Vector2.new(0, 1)
 BottomBar.Position = UDim2.new(0, 0, 1, 0)
 BottomBar.Size = UDim2.new(1, 0, 0, 42)
 BottomBar.BackgroundTransparency = 1
+BottomBar.ZIndex = 12
 
 local MainIcon = Instance.new("ImageLabel", BottomBar)
 MainIcon.AnchorPoint = Vector2.new(0, 0.5)
@@ -499,7 +855,7 @@ local SettingsPanel = Instance.new("Frame", MainPanel)
 SettingsPanel.Position = UDim2.new(1, 0, 0, 0)
 SettingsPanel.Size = UDim2.new(1, 0, 1, 0)
 SettingsPanel.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
-SettingsPanel.ZIndex = 5
+SettingsPanel.ZIndex = 15
 
 local SettingsBackBtn = Instance.new("ImageButton", SettingsPanel)
 SettingsBackBtn.AnchorPoint = Vector2.new(0, 0.5)
@@ -509,7 +865,7 @@ SettingsBackBtn.BackgroundTransparency = 1
 SettingsBackBtn.Image = BACK_ICON
 SettingsBackBtn.Rotation = 180
 SettingsBackBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
-SettingsBackBtn.ZIndex = 6
+SettingsBackBtn.ZIndex = 16
 
 local SettingsTitle = Instance.new("TextLabel", SettingsPanel)
 SettingsTitle.AnchorPoint = Vector2.new(0, 0.5)
@@ -521,7 +877,7 @@ SettingsTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
 SettingsTitle.Font = Enum.Font.GothamMedium
 SettingsTitle.TextSize = 13
 SettingsTitle.TextXAlignment = Enum.TextXAlignment.Left
-SettingsTitle.ZIndex = 6
+SettingsTitle.ZIndex = 16
 
 local ProfilePic = Instance.new("ImageLabel", SettingsPanel)
 ProfilePic.Size = UDim2.new(0, 36, 0, 36)
@@ -555,26 +911,17 @@ local dragging, dragInput, dragStart, startPos
 MainPanel.InputBegan:Connect(function(input)
 	if not isExpanded then return end
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		dragging = true
-		isDragged = true
-		dragStart = input.Position
-		startPos = MainPanel.Position
+		dragging = true; isDragged = true; dragStart = input.Position; startPos = MainPanel.Position
 		UpdateNotifPosition()
 	end
 end)
 
 MainPanel.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		dragging = false
-	end
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
 end)
-
 MainPanel.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-		dragInput = input
-	end
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
 end)
-
 dragConn = UserInputService.InputChanged:Connect(function(input)
 	if input == dragInput and dragging and isExpanded then
 		local delta = input.Position - dragStart
@@ -610,33 +957,27 @@ local PaperAPI = {
 	RegisterCommand = RegisterCommand,
 	Notify = Notify,
 	GetPlayer = GetPlayerFromQuery,
-	SetUIExpanded = function(state)
-		isExpanded = state
-		UpdateUIState()
-	end,
+	SetUIExpanded = function(state) isExpanded = state; UpdateUIState() end,
 	SetWatermarkVisible = function(state) Watermark.Visible = state end,
 	SetNotifsEnabled = function(state) notifsEnabled = state end,
 	TargetGui = targetGui,
-	TracerContainer = TracerContainer
+	TracerContainer = TracerContainer,
+	DoFastHop = DoFastHop,
+	ShowConfirmPrompt = ShowConfirmPrompt,
+	ShowServerListUI = ShowServerListUI
 }
 
 local success, result = pcall(function()
 	local src = game:HttpGet(GetGithubFile("Utils/commands.luau"))
 	local fn = loadstring(src)
-	if type(fn) == "function" then 
-		return fn 
-	else
-		error("Failed to compile commands.luau: " .. tostring(fn))
-	end
+	if type(fn) == "function" then return fn else error("Failed to compile commands.luau") end
 end)
 
 if success and type(result) == "function" then
 	local apiSuccess, apiErr = pcall(result, PaperAPI)
-	if not apiSuccess then
-		Notify("Error", "Execution error in commands: " .. tostring(apiErr))
-	end
+	if not apiSuccess then Notify("Error", "Execution error in commands: " .. tostring(apiErr)) end
 else
-	Notify("Error", "Failed to load commands script: " .. tostring(result))
+	Notify("Error", "Failed to load commands script.")
 end
 
 local function PopulateCommandList()
@@ -647,21 +988,14 @@ local function PopulateCommandList()
 		local F = Instance.new("Frame", CommandScroll)
 		F.Size = UDim2.new(1, -8, 0, 44)
 		F.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-		local C = Instance.new("UICorner", F)
-		C.CornerRadius = UDim.new(0, 2)
-		local S = Instance.new("UIStroke", F)
-		S.Color = Color3.fromRGB(45, 45, 45)
+		Instance.new("UICorner", F).CornerRadius = UDim.new(0, 2)
+		Instance.new("UIStroke", F).Color = Color3.fromRGB(45, 45, 45)
 		
 		local T = Instance.new("TextLabel", F)
 		T.Position = UDim2.new(0, 12, 0, 6)
 		T.Size = UDim2.new(1, -24, 0, 16)
 		T.BackgroundTransparency = 1
-		
-		local aliasText = ""
-		if cmd.Aliases and #cmd.Aliases > 0 then
-			aliasText = " [" .. table.concat(cmd.Aliases, ", ") .. "]"
-		end
-		
+		local aliasText = (cmd.Aliases and #cmd.Aliases > 0) and (" [" .. table.concat(cmd.Aliases, ", ") .. "]") or ""
 		T.Text = cmd.Name .. aliasText .. " " .. cmd.ArgHint
 		T.TextColor3 = Color3.fromRGB(255, 255, 255)
 		T.Font = Enum.Font.GothamMedium
@@ -682,29 +1016,16 @@ local function PopulateCommandList()
 	CommandScroll.CanvasSize = UDim2.new(0, 0, 0, #CommandRegistry * 50)
 end
 
-HoverZone.MouseEnter:Connect(function()
-	if not loaded then return end
-	isHovered = true
-	UpdateUIState()
-end)
-HoverZone.MouseLeave:Connect(function()
-	if not loaded then return end
-	isHovered = false
-	UpdateUIState()
-end)
-
+HoverZone.MouseEnter:Connect(function() if not loaded then return end isHovered = true; UpdateUIState() end)
+HoverZone.MouseLeave:Connect(function() if not loaded then return end isHovered = false; UpdateUIState() end)
 SettingsBtn.MouseEnter:Connect(function() pcall(function() TweenService:Create(SettingsBtn, fastTween, {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play() end) end)
 SettingsBtn.MouseLeave:Connect(function() pcall(function() TweenService:Create(SettingsBtn, fastTween, {ImageColor3 = Color3.fromRGB(180, 180, 180)}):Play() end) end)
-
 SettingsBtn.MouseButton1Click:Connect(function()
-	settingsOpen = true
-	UpdateUIState()
+	settingsOpen = true; UpdateUIState()
 	pcall(function() TweenService:Create(SettingsPanel, smoothTween, {Position = UDim2.new(0, 0, 0, 0)}):Play() end)
 end)
-
 SettingsBackBtn.MouseButton1Click:Connect(function()
-	settingsOpen = false
-	UpdateUIState()
+	settingsOpen = false; UpdateUIState()
 	pcall(function() TweenService:Create(SettingsPanel, smoothTween, {Position = UDim2.new(1, 0, 0, 0)}):Play() end)
 end)
 
@@ -721,11 +1042,8 @@ local function CreateSuggestion(iconId, titleText, subText, autoFillText)
 	Frame.Size = UDim2.new(1, 0, 0, 0)
 	Frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 	Frame.ClipsDescendants = true
-	
-	local Corner = Instance.new("UICorner", Frame)
-	Corner.CornerRadius = UDim.new(0, 2)
-	local Stroke = Instance.new("UIStroke", Frame)
-	Stroke.Color = Color3.fromRGB(45, 45, 45)
+	Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 2)
+	Instance.new("UIStroke", Frame).Color = Color3.fromRGB(45, 45, 45)
 	
 	local Icon = Instance.new("ImageLabel", Frame)
 	Icon.AnchorPoint = Vector2.new(0, 0.5)
@@ -733,10 +1051,7 @@ local function CreateSuggestion(iconId, titleText, subText, autoFillText)
 	Icon.Size = UDim2.new(0, 20, 0, 20)
 	Icon.BackgroundTransparency = 1
 	Icon.Image = iconId
-	if string.find(iconId, "headshot") then
-		local IconCorner = Instance.new("UICorner", Icon)
-		IconCorner.CornerRadius = UDim.new(1, 0)
-	end
+	if string.find(iconId, "headshot") then Instance.new("UICorner", Icon).CornerRadius = UDim.new(1, 0) end
 	
 	local Title = Instance.new("TextLabel", Frame)
 	Title.Position = UDim2.new(0, 38, 0, 6)
@@ -763,11 +1078,7 @@ local function CreateSuggestion(iconId, titleText, subText, autoFillText)
 	ClickBtn.Size = UDim2.new(1, 0, 1, 0)
 	ClickBtn.BackgroundTransparency = 1
 	ClickBtn.Text = ""
-	ClickBtn.MouseButton1Click:Connect(function()
-		TextBox.Text = autoFillText
-		TextBox:CaptureFocus()
-		TextBox.CursorPosition = #TextBox.Text + 1
-	end)
+	ClickBtn.MouseButton1Click:Connect(function() TextBox.Text = autoFillText; TextBox:CaptureFocus(); TextBox.CursorPosition = #TextBox.Text + 1 end)
 	AddTooltip(ClickBtn, "Click to auto-fill")
 	
 	table.insert(activeSuggestions, Frame)
@@ -775,23 +1086,17 @@ local function CreateSuggestion(iconId, titleText, subText, autoFillText)
 end
 
 local function IsCommandMatch(cmd, query)
-	if string.sub(cmd.Name, 1, #query) == query then 
-		return true, cmd.Name 
-	end
+	if string.sub(cmd.Name, 1, #query) == query then return true, cmd.Name end
 	if cmd.Aliases then
 		for _, alias in ipairs(cmd.Aliases) do
-			if string.sub(alias, 1, #query) == query then 
-				return true, alias 
-			end
+			if string.sub(alias, 1, #query) == query then return true, alias end
 		end
 	end
 	return false, nil
 end
 
 TextBox:GetPropertyChangedSignal("Text"):Connect(function()
-	if TextBox.Text == ";" and not isFocused then
-		TextBox.Text = ""
-	end
+	if TextBox.Text == ";" and not isFocused then TextBox.Text = "" end
 	ClearSuggestions()
 	if not isFocused then return end
 	
@@ -815,10 +1120,7 @@ TextBox:GetPropertyChangedSignal("Text"):Connect(function()
 		local selectedCmd = nil
 		for _, cmd in ipairs(CommandRegistry) do
 			local match, matchStr = IsCommandMatch(cmd, cmdQuery)
-			if match then
-				selectedCmd = cmd
-				break
-			end
+			if match then selectedCmd = cmd; break end
 		end
 		
 		if selectedCmd and selectedCmd.ArgType == "player" then
@@ -845,59 +1147,33 @@ TextBox:GetPropertyChangedSignal("Text"):Connect(function()
 	end
 end)
 
-TextBox.Focused:Connect(function()
-	if not loaded then return end
-	isFocused = true
-	UpdateUIState()
-end)
-
+TextBox.Focused:Connect(function() if not loaded then return end isFocused = true; UpdateUIState() end)
 TextBox.FocusLost:Connect(function(enterPressed)
-	isFocused = false
-	ClearSuggestions()
-	UpdateUIState()
-	
+	isFocused = false; ClearSuggestions(); UpdateUIState()
 	if enterPressed then
-		local input = TextBox.Text
-		TextBox.Text = ""
+		local input = TextBox.Text; TextBox.Text = ""
 		local args = {}
-		for arg in string.gmatch(input, "[^%s]+") do
-			table.insert(args, arg)
-		end
+		for arg in string.gmatch(input, "[^%s]+") do table.insert(args, arg) end
 		local cmdQuery = string.lower(args[1] or "")
 		if cmdQuery ~= "" then
 			local selectedCmd = nil
 			for _, cmd in ipairs(CommandRegistry) do
-				if cmd.Name == cmdQuery or (cmd.Aliases and table.find(cmd.Aliases, cmdQuery)) then
-					selectedCmd = cmd
-					break
-				end
+				if cmd.Name == cmdQuery or (cmd.Aliases and table.find(cmd.Aliases, cmdQuery)) then selectedCmd = cmd; break end
 			end
 			if not selectedCmd then
 				for _, cmd in ipairs(CommandRegistry) do
-					if string.sub(cmd.Name, 1, #cmdQuery) == cmdQuery then
-						selectedCmd = cmd
-						break
-					end
+					if string.sub(cmd.Name, 1, #cmdQuery) == cmdQuery then selectedCmd = cmd; break end
 					if cmd.Aliases then
 						local foundAlias = false
 						for _, alias in ipairs(cmd.Aliases) do
-							if string.sub(alias, 1, #cmdQuery) == cmdQuery then
-								foundAlias = true
-								break
-							end
+							if string.sub(alias, 1, #cmdQuery) == cmdQuery then foundAlias = true; break end
 						end
-						if foundAlias then
-							selectedCmd = cmd
-							break
-						end
+						if foundAlias then selectedCmd = cmd; break end
 					end
 				end
 			end
-			if selectedCmd then
-				pcall(function() selectedCmd.Callback(args) end)
-			else
-				Notify("Error", "Unknown command: " .. cmdQuery)
-			end
+			if selectedCmd then pcall(function() selectedCmd.Callback(args) end)
+			else Notify("Error", "Unknown command: " .. cmdQuery) end
 		end
 	end
 end)
@@ -906,15 +1182,9 @@ keybindConn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed or not loaded then return end
 	if input.KeyCode == Enum.KeyCode.Semicolon then
 		isFocused = true
-		if settingsOpen then
-			settingsOpen = false
-			pcall(function() TweenService:Create(SettingsPanel, smoothTween, {Position = UDim2.new(1, 0, 0, 0)}):Play() end)
-		end
+		if settingsOpen then settingsOpen = false; pcall(function() TweenService:Create(SettingsPanel, smoothTween, {Position = UDim2.new(1, 0, 0, 0)}):Play() end) end
 		UpdateUIState()
-		task.delay(0.01, function()
-			TextBox:CaptureFocus()
-			if TextBox.Text == ";" then TextBox.Text = "" end
-		end)
+		task.delay(0.01, function() TextBox:CaptureFocus(); if TextBox.Text == ";" then TextBox.Text = "" end end)
 	end
 end)
 
@@ -929,7 +1199,6 @@ local function fetchSources()
 end
 
 local initialMain, initialCmds = fetchSources()
-
 task.spawn(function()
 	while task.wait(15) do
 		local curMain, curCmds = fetchSources()
@@ -938,19 +1207,15 @@ task.spawn(function()
 			if successFn and type(loadFn) == "function" then
 				Notify("Update", "Changes have been pulled, now updating...", MAIN_ICON)
 				task.wait(2.5)
-				
 				if tooltipConn then tooltipConn:Disconnect() end
 				if suggConn then suggConn:Disconnect() end
 				if dragConn then dragConn:Disconnect() end
 				if keybindConn then keybindConn:Disconnect() end
-				
 				if ScreenGui then ScreenGui:Destroy() end
-				
 				pcall(loadFn)
 				break
 			else
-				initialMain = curMain
-				initialCmds = curCmds
+				initialMain = curMain; initialCmds = curCmds
 			end
 		end
 	end
@@ -963,6 +1228,7 @@ task.spawn(function()
 	LoaderPanel.Size = UDim2.new(0, 280, 0, 80)
 	LoaderPanel.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
 	LoaderPanel.ClipsDescendants = true
+	LoaderPanel.ZIndex = 50
 	
 	local LCorner = Instance.new("UICorner", LoaderPanel)
 	LCorner.CornerRadius = UDim.new(0, 2)
@@ -977,6 +1243,7 @@ task.spawn(function()
 	LIcon.Image = MAIN_ICON
 	LIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
 	LIcon.ImageTransparency = 1
+	LIcon.ZIndex = 51
 	
 	local LCredit1 = Instance.new("TextLabel", LoaderPanel)
 	LCredit1.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -988,6 +1255,7 @@ task.spawn(function()
 	LCredit1.Font = Enum.Font.Gotham
 	LCredit1.TextSize = 10
 	LCredit1.TextTransparency = 1
+	LCredit1.ZIndex = 51
 	
 	local LCredit2 = Instance.new("TextLabel", LoaderPanel)
 	LCredit2.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -999,6 +1267,7 @@ task.spawn(function()
 	LCredit2.Font = Enum.Font.GothamMedium
 	LCredit2.TextSize = 12
 	LCredit2.TextTransparency = 1
+	LCredit2.ZIndex = 51
 
 	pcall(function()
 		TweenService:Create(LIcon, smoothTween, {ImageTransparency = 0}):Play()
@@ -1020,4 +1289,19 @@ task.spawn(function()
 	Watermark.Visible = true
 	UpdateUIState()
 	Notify("Paper", "Loaded Successfully! Auto-execute enabled.", MAIN_ICON)
+
+	if isfile and isfile("Paper_ListServers.json") then
+		local ds, dt = pcall(function() return HttpService:JSONDecode(readfile("Paper_ListServers.json")) end)
+		if ds and dt and #dt.ServersToVisit == 0 then
+			pcall(delfile, "Paper_ListServers.json")
+			if dt.OriginalPosition then
+				task.spawn(function()
+					local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+					local hrp = char:WaitForChild("HumanoidRootPart", 5)
+					if hrp then hrp.CFrame = CFrame.new(dt.OriginalPosition.X, dt.OriginalPosition.Y, dt.OriginalPosition.Z) end
+				end)
+			end
+			task.spawn(function() PaperAPI.ShowServerListUI(dt.GatheredData) end)
+		end
+	end
 end)
