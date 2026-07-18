@@ -1,4 +1,3 @@
--- In a ModuleScript named "Theme"
 local ThemeKeys = {}
 
 local textColor = Color3.fromRGB(188, 190, 200)
