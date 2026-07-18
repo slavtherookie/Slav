@@ -1,4 +1,3 @@
--- developed by slavtherookie
 local Builder = {}
 Builder.__index = Builder
 
