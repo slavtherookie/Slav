@@ -16,12 +16,10 @@ local Materials = {
 	Enum.Material.Wood,
 	Enum.Material.Slate,
 	Enum.Material.Concrete,
-	Enum.Material.Rust,
 	Enum.Material.Cobblestone,
 	Enum.Material.Brick,
 	Enum.Material.Sand,
 	Enum.Material.Fabric,
-	Enum.Material.CoarseSand,
 	Enum.Material.Ice,
 	Enum.Material.Glass,
 	Enum.Material.SmoothPlastic,
@@ -48,15 +46,9 @@ local Materials = {
 	Enum.Material.Salt,
 	Enum.Material.Limestone,
 	Enum.Material.Pavement,
-	Enum.Material.Scoria,
-	Enum.Material.Cardboard,
-	Enum.Material.Carpet,
-	Enum.Material.CeramicTiles,
-	Enum.Material.ClayRoofTiles,
-	Enum.Material.RoofShingles,
-	Enum.Material.Leather,
-	Enum.Material.Plaster,
-	Enum.Material.Rubber
+	Enum.Material.ForceField,
+	Enum.Material.Air,
+	Enum.Material.Water
 }
 
 local ClassToId = {}
