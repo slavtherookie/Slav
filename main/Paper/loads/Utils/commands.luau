@@ -1096,6 +1096,7 @@ RegisterCommand("bluechams", {}, "", "none", "Blue Player ESP", function() setCo
 RegisterCommand("greenchams", {}, "", "none", "Green Player ESP", function() setColorChams(Color3.new(0, 1, 0)) end)
 RegisterCommand("clearchams", {}, "", "none", "Removes Color ESP", function() chamFolder:ClearAllChildren() end)
 
+
 -- FAST HOP: Server Hop to find player
 RegisterCommand("find", {"join"}, "[userid/name]", "none", "Server hops to find player", function(args)
     local target = args[2]
@@ -1115,8 +1116,42 @@ RegisterCommand("stopfind", {"stopjoin"}, "", "none", "Stops server hopping", fu
     end
 end)
 
--- FAST HOP: Server list scanner
-RegisterCommand("listservers", {"ls"}, "", "none", "Scans and lists servers", function()
+-- FAST HOP: Specific Server / Current Server
+RegisterCommand("listserver", {"ls", "serverlist"}, "[jobid?]", "none", "Lists players in a server", function(args)
+    local targetJobId = args[2]
+    
+    -- If NO JobId provided, simply load the current server instantly!
+    if not targetJobId or targetJobId == "" then
+        local playersList = {}
+        for _, p in ipairs(Players:GetPlayers()) do
+            table.insert(playersList, {UserId = p.UserId, Name = p.Name, DisplayName = p.DisplayName})
+        end
+        PaperAPI.ShowServerListUI({ [game.JobId] = playersList })
+        Notify("Scanner", "Showing current server.")
+    else
+        -- If JobId IS provided, scan that specific server then return!
+        PaperAPI.ShowConfirmPrompt(
+            "Server Scanner", 
+            "Hop to specific server and return to here?\nJobId: " .. targetJobId,
+            function()
+                local root = getRoot(LocalPlayer.Character)
+                local pos = root and {X = root.Position.X, Y = root.Position.Y, Z = root.Position.Z} or nil
+                
+                local payload = {
+                    OriginalJobId = game.JobId,
+                    OriginalPosition = pos,
+                    ServersToVisit = {targetJobId},
+                    GatheredData = {}
+                }
+                pcall(function() writefile("Paper_ListServers.json", HttpService:JSONEncode(payload)) end)
+                if PaperAPI and PaperAPI.DoFastHop then PaperAPI.DoFastHop() end
+            end
+        )
+    end
+end)
+
+-- FAST HOP: Scan ALL Servers
+RegisterCommand("scanallservers", {"scanall"}, "", "none", "Scans all servers", function()
     local req = request or http_request or (syn and syn.request) or (fluxus and fluxus.request)
     if not req then return Notify("Error", "Executor does not support requests.") end
 
@@ -1125,7 +1160,8 @@ RegisterCommand("listservers", {"ls"}, "", "none", "Scans and lists servers", fu
     local serversToVisit = {}
     local cursor = ""
     for _ = 1, 3 do 
-        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"
+        -- USE ROPROXY HERE SO IT DOESN'T GET BLOCKED
+        local url = "https://games.roproxy.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"
         if cursor ~= "" then url = url .. "&cursor=" .. cursor end
         local res = req({Url = url, Method = "GET"})
         if res and res.StatusCode == 200 then
@@ -1137,14 +1173,17 @@ RegisterCommand("listservers", {"ls"}, "", "none", "Scans and lists servers", fu
             end
             cursor = body.nextPageCursor
             if not cursor or cursor == "" then break end
-        else break end
+        else 
+            Notify("Error", "API request blocked or failed. Code: " .. tostring(res and res.StatusCode))
+            break 
+        end
     end
     
-    if #serversToVisit == 0 then return Notify("Scanner", "No other servers found.") end
+    if #serversToVisit == 0 then return Notify("Scanner", "No other servers found to scan.") end
 
     local estTime = math.ceil(#serversToVisit * 6 / 60)
     PaperAPI.ShowConfirmPrompt(
-        "Server Scanner", 
+        "Scan All Servers", 
         "Found " .. #serversToVisit .. " other servers.\nEstimated time to scan: " .. estTime .. " minute(s).\n\nYou will be seamlessly teleported to fetch everyone, then returned to exactly where you stand. Proceed?",
         function()
             local root = getRoot(LocalPlayer.Character)
