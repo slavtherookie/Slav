@@ -1,4 +1,4 @@
-local DEBUG_MODE = true -- Set to false to disable debug prints in console
+local DEBUG_MODE = true
 
 local function DebugPrint(msg)
     if DEBUG_MODE then
@@ -10,7 +10,6 @@ DebugPrint("Initializing commands.luau...")
 
 local PaperAPI = ...
 if not PaperAPI then
-    warn("[Paper Debug] FATAL ERROR: PaperAPI is nil! commands.luau must be loaded by Paper.luau")
     return
 end
 
@@ -33,7 +32,6 @@ local function RegisterCommand(name, aliases, argHint, argType, description, cal
         ArgType = argType,
         Description = description
     })
-    -- Wrap the callback to catch errors and print debug info
     OriginalRegisterCommand(name, aliases, argHint, argType, description, function(args)
         DebugPrint("Command Executed: " .. name .. " | Args: " .. table.concat(args, ", "))
         local success, err = pcall(callback, args)
@@ -1093,8 +1091,6 @@ RegisterCommand("bluechams", {}, "", "none", "Blue Player ESP", function() setCo
 RegisterCommand("greenchams", {}, "", "none", "Green Player ESP", function() setColorChams(Color3.new(0, 1, 0)) end)
 RegisterCommand("clearchams", {}, "", "none", "Removes Color ESP", function() chamFolder:ClearAllChildren() end)
 
-
--- FAST HOP: Server Hop to find player
 RegisterCommand("find", {"join"}, "[userid/name]", "none", "Server hops to find player", function(args)
     local target = args[2]
     if not target then return end
@@ -1105,7 +1101,7 @@ RegisterCommand("find", {"join"}, "[userid/name]", "none", "Server hops to find 
             DebugPrint("Calling DoFastHop API...")
             PaperAPI.DoFastHop()
         else
-            DebugPrint("PaperAPI.DoFastHop is missing. Update Paper.luau!")
+            DebugPrint("PaperAPI.DoFastHop is missing.")
         end
     else
         Notify("Error", "Executor does not support writefile.")
@@ -1120,7 +1116,6 @@ RegisterCommand("stopfind", {"stopjoin"}, "", "none", "Stops server hopping", fu
     end
 end)
 
--- FAST HOP: Specific Server / Current Server
 RegisterCommand("listserver", {"ls", "serverlist"}, "[jobid?]", "none", "Lists players in a server", function(args)
     local targetJobId = args[2]
     DebugPrint("listserver command executed. Arg: " .. tostring(targetJobId))
@@ -1134,19 +1129,19 @@ RegisterCommand("listserver", {"ls", "serverlist"}, "[jobid?]", "none", "Lists p
         local currentJobId = game.JobId
         if currentJobId == nil or currentJobId == "" then
             currentJobId = "Studio/Local_Server"
-            DebugPrint("JobId is empty (likely Studio). Replaced with placeholder.")
+            DebugPrint("JobId is empty.")
         end
 
-        DebugPrint("Players fetched: " .. #playersList .. ". Calling PaperAPI.ShowServerListUI")
+        DebugPrint("Players fetched: " .. #playersList)
         if PaperAPI and PaperAPI.ShowServerListUI then
             PaperAPI.ShowServerListUI({ [currentJobId] = playersList })
             Notify("Scanner", "Showing current server.")
         else
-            DebugPrint("ERROR: PaperAPI.ShowServerListUI is missing! Update your Paper.luau")
-            Notify("Error", "UI API Missing! Update Paper.luau")
+            DebugPrint("ERROR: PaperAPI.ShowServerListUI is missing!")
+            Notify("Error", "UI API Missing!")
         end
     else
-        DebugPrint("Specific JobId provided: " .. targetJobId .. ". Prompting for teleport...")
+        DebugPrint("Specific JobId provided: " .. targetJobId)
         if PaperAPI and PaperAPI.ShowConfirmPrompt then
             PaperAPI.ShowConfirmPrompt(
                 "Server Scanner", 
@@ -1167,146 +1162,46 @@ RegisterCommand("listserver", {"ls", "serverlist"}, "[jobid?]", "none", "Lists p
                 end
             )
         else
-            DebugPrint("ERROR: PaperAPI.ShowConfirmPrompt is missing! Update your Paper.luau")
-            Notify("Error", "UI API Missing! Update Paper.luau")
+            DebugPrint("ERROR: PaperAPI.ShowConfirmPrompt is missing!")
+            Notify("Error", "UI API Missing!")
         end
     end
 end)
 
--- FAST HOP: Scan ALL Servers
--- Strategy: while the player is already in the game, we can use TeleportService:GetPlayerPlaceInstanceAsync
--- on known online players (from presence API) to get their JobIds directly — much faster than paging
--- through the public server list, and avoids 403s from roproxy.
-RegisterCommand("listservers", {"scanall"}, "", "none", "Scans all servers", function()
-    DebugPrint("listservers command executed.")
-    local req = request or http_request or (syn and syn.request) or (fluxus and fluxus.request)
-    if not req then 
-        DebugPrint("No valid HTTP request function found for this executor.")
-        return Notify("Error", "Executor does not support HTTP requests.") 
-    end
-
-    Notify("Scanner", "Discovering servers (fast mode)...")
+RegisterCommand("listservers", {"scanall"}, "", "none", "Scans all servers via IP", function()
+    local subnets = {
+        "128.116.115.0/24", "128.116.116.0/24", "128.116.1.0/24", "128.116.63.0/24",
+        "128.116.95.0/24", "128.116.101.0/24", "128.116.48.0/24", "128.116.22.0/24",
+        "128.116.99.0/24", "128.116.45.0/24", "128.116.127.0/24", "128.116.102.0/24",
+        "128.116.53.0/24", "128.116.32.0/24", "128.116.33.0/24", "128.116.119.0/24",
+        "128.116.21.0/24", "128.116.4.0/24", "128.116.122.0/24", "128.116.5.0/24",
+        "128.116.44.0/24", "128.116.123.0/24", "128.116.31.0/24", "128.116.124.0/24",
+        "128.116.104.0/24", "128.116.55.0/24", "128.116.120.0/24", "128.116.50.0/24",
+        "128.116.97.0/24", "128.116.51.0/24", "128.116.30.0/24", "128.116.118.0/24",
+        "128.116.117.0/24", "209.206.42.0/24", "209.206.43.0/24"
+    }
 
     local serversToVisit = {}
-    local seenJobIds = { [game.JobId] = true } -- skip current server
-
-    -- ── FAST PATH: query online presence of all players in this game ──────────
-    -- We page through the game's player list using the Roblox presence API.
-    -- Each entry gives us a placeId + gameId (JobId) directly — no hopping needed
-    -- to gather the list.
-    local function fetchViaPresence()
-        DebugPrint("Fast path: fetching online players via presence API...")
-        local placeId = tostring(game.PlaceId)
-
-        -- Roblox presence API: POST /v2/presence/users
-        -- We first get a batch of userIds who are playing this game via the
-        -- games/{placeId}/servers endpoint. But since that 403'd, instead we
-        -- use the *friends* presence endpoint for the local player to seed the
-        -- list, then fall through to the API fallback for non-friends.
-        local friendsOk = false
-        pcall(function()
-            local friendsRes = req({
-                Url = "https://friends.roblox.com/v1/users/" .. tostring(LocalPlayer.UserId) .. "/friends/online",
-                Method = "GET",
-            })
-            if friendsRes and friendsRes.StatusCode == 200 then
-                local body = HttpService:JSONDecode(friendsRes.Body)
-                local userIds = {}
-                for _, entry in ipairs(body.data or {}) do
-                    -- entry.userPresenceType == 2 means InGame
-                    if entry.userPresenceType == 2 and tostring(entry.placeId) == placeId then
-                        table.insert(userIds, entry.userId or entry.id)
-                    end
-                end
-                DebugPrint("Friends in this game: " .. #userIds)
-                for _, uid in ipairs(userIds) do
-                    local ok, jobId = pcall(function()
-                        return TeleportService:GetPlayerPlaceInstanceAsync(uid)
-                    end)
-                    if ok and jobId and jobId ~= "" and not seenJobIds[jobId] then
-                        seenJobIds[jobId] = true
-                        table.insert(serversToVisit, jobId)
-                        DebugPrint("Discovered server via friend UID " .. uid .. ": " .. jobId)
-                    end
-                end
-                friendsOk = true
-            end
-        end)
-        return friendsOk
-    end
-
-    -- ── FALLBACK: page the public server list API ─────────────────────────────
-    local function fetchViaAPI()
-        DebugPrint("Fallback: fetching server list via public API...")
-        local cursor = ""
-        for page = 1, 5 do
-            -- Try roproxy first, then fall back to apis.roblox.com
-            local urls = {
-                "https://games.roproxy.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100",
-                "https://apis.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100",
-            }
-            if cursor ~= "" then
-                urls[1] = urls[1] .. "&cursor=" .. cursor
-                urls[2] = urls[2] .. "&cursor=" .. cursor
-            end
-
-            local res, usedUrl
-            for _, url in ipairs(urls) do
-                DebugPrint("Requesting: " .. url)
-                local r = req({Url = url, Method = "GET"})
-                if r and r.StatusCode == 200 then
-                    res = r
-                    usedUrl = url
-                    break
-                else
-                    DebugPrint("Failed (" .. tostring(r and r.StatusCode or "N/A") .. ") for: " .. url)
-                end
-            end
-
-            if not res then
-                DebugPrint("All API endpoints failed on page " .. page)
-                Notify("Error", "Server list API unavailable.")
-                break
-            end
-
-            DebugPrint("API page " .. page .. " OK via " .. tostring(usedUrl))
-            local body = HttpService:JSONDecode(res.Body)
-            for _, srv in ipairs(body.data or {}) do
-                if srv.id and not seenJobIds[srv.id] then
-                    seenJobIds[srv.id] = true
-                    table.insert(serversToVisit, srv.id)
-                end
-            end
-            cursor = body.nextPageCursor
-            if not cursor or cursor == "" then
-                DebugPrint("No more API pages.")
-                break
+    for _, subnet in ipairs(subnets) do
+        local p1, p2, p3 = subnet:match("(%d+)%.(%d+)%.(%d+)%.")
+        if p1 and p2 and p3 then
+            for i = 1, 254 do
+                table.insert(serversToVisit, p1 .. "." .. p2 .. "." .. p3 .. "." .. i)
             end
         end
     end
 
-    -- Run fast path first, then supplement with API if we got very few servers
-    fetchViaPresence()
-    if #serversToVisit < 3 then
-        -- Either not enough friends in-game or presence failed — run the API path
-        fetchViaAPI()
-    end
-
-    DebugPrint("Total unique servers to visit: " .. #serversToVisit)
     if #serversToVisit == 0 then
-        return Notify("Scanner", "No other servers found to scan.")
+        return Notify("Scanner", "No IPs generated.")
     end
 
-    local estTime = math.ceil(#serversToVisit * 6 / 60)
     if PaperAPI and PaperAPI.ShowConfirmPrompt then
         PaperAPI.ShowConfirmPrompt(
             "Scan All Servers",
-            "Found " .. #serversToVisit .. " other servers.\nEstimated time to scan: " .. estTime .. " minute(s).\n\nYou will be seamlessly teleported to fetch everyone, then returned to exactly where you stand. Proceed?",
+            "Generated " .. #serversToVisit .. " IP addresses to scan.\nProceed?",
             function()
-                DebugPrint("User confirmed all server scan.")
                 local root = getRoot(LocalPlayer.Character)
                 local pos = root and {X = root.Position.X, Y = root.Position.Y, Z = root.Position.Z} or nil
-
                 local payload = {
                     OriginalJobId = game.JobId,
                     OriginalPosition = pos,
@@ -1318,7 +1213,6 @@ RegisterCommand("listservers", {"scanall"}, "", "none", "Scans all servers", fun
             end
         )
     else
-        DebugPrint("ERROR: PaperAPI.ShowConfirmPrompt is missing! Update your Paper.luau")
-        Notify("Error", "UI API Missing! Update Paper.luau")
+        Notify("Error", "UI API Missing!")
     end
 end)
