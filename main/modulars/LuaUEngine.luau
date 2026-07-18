@@ -517,6 +517,7 @@ function Baseline.new(canvasGroup)
     self.CurrentFoldPairs = {}
     self.SyntaxRules = nil
     self.IsFocused = false
+    self.IsTyping = false
     self.IsDragging = false
     self.DraggingMinimap = false
     self.IsPasting = false
@@ -623,17 +624,6 @@ function Baseline.new(canvasGroup)
     self.PlaceholderLabel.TextYAlignment = Enum.TextYAlignment.Top
     self.PlaceholderLabel.ZIndex = 1
     self.PlaceholderLabel.Parent = self.InnerFrame
-
-    self.GhostTextLabel = Instance.new("TextLabel")
-    self.GhostTextLabel.Name = "GhostTextLabel"
-    self.GhostTextLabel.Size = UDim2.new(0, 10000, 0, 25)
-    self.GhostTextLabel.BackgroundTransparency = 1
-    self.GhostTextLabel.TextColor3 = Color3.fromRGB(130, 130, 130)
-    self.GhostTextLabel.TextXAlignment = Enum.TextXAlignment.Left
-    self.GhostTextLabel.TextYAlignment = Enum.TextYAlignment.Top
-    self.GhostTextLabel.ZIndex = 3
-    self.GhostTextLabel.Visible = false
-    self.GhostTextLabel.Parent = self.InnerFrame
     
     self.HighlightContainer = Instance.new("Frame")
     self.HighlightContainer.Name = "BaselineHighlightContainer"
@@ -756,6 +746,7 @@ function Baseline.new(canvasGroup)
             end
             if self.LineNumbersContainer and self.LineNumbersContainer.Visible and isInside(self.LineNumbersContainer) then
                 self:Focus()
+                self.IsTyping = false
                 return
             end
             if self.AutocompleteUI.Visible and (isInside(self.AutocompleteUI) or isInside(self.AutocompleteHint)) then
@@ -764,6 +755,7 @@ function Baseline.new(canvasGroup)
             local didClickSelf = isInside(self.CanvasGroup)
             if didClickSelf then
                 self:Focus()
+                self.IsTyping = false
                 self:HideAutocomplete()
                 local relativeX = (pos.X - self.InnerFrame.AbsolutePosition.X) - 4
                 local relativeY = (pos.Y - self.InnerFrame.AbsolutePosition.Y) - 4
@@ -818,7 +810,7 @@ function Baseline.new(canvasGroup)
                     self:RenderAutocomplete()
                     return
                 elseif input.KeyCode == Enum.KeyCode.Right then
-                    if self.GhostTextLabel.Visible then
+                    if match and match.word:lower():sub(1, #word) == word:lower() and #match.word > #word then
                         if self:CommitAutocomplete() then return end
                     end
                 elseif input.KeyCode == Enum.KeyCode.Tab then
@@ -887,6 +879,7 @@ function Baseline.new(canvasGroup)
             return
         end
         if self.IsDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            self.IsTyping = false
             local pos = input.Position
             local relativeX = (pos.X - self.InnerFrame.AbsolutePosition.X) - 4
             local relativeY = (pos.Y - self.InnerFrame.AbsolutePosition.Y) - 4
@@ -1861,6 +1854,7 @@ function Baseline:PasteChunked(text)
     if self.CanvasGroup:GetAttribute("ReadOnly") then return end
     if self.IsPasting then return end
     self.IsPasting = true
+    self.IsTyping = true
     local maxLength = self.CanvasGroup:GetAttribute("MaxLength")
     if maxLength and maxLength > 0 then
         local currentLength = utf8.len(self.CanvasGroup:GetAttribute("Text") or "") or 0
@@ -1897,6 +1891,7 @@ end
 function Baseline:Focus()
     if self.IsFocused then return end
     self.IsFocused = true
+    self.IsTyping = false
     self.Blinker.Visible = self.SelectionStart == self.CursorIndex
     self.BlinkTimer = 0
     ContextActionService:BindAction(self.SinkActionName, function() return Enum.ContextActionResult.Sink end, false, unpack(KeyMaps.SinkKeys))
@@ -1907,6 +1902,7 @@ end
 function Baseline:Unfocus()
     if not self.IsFocused then return end
     self.IsFocused = false
+    self.IsTyping = false
     self.Blinker.Visible = false
     self.HeldKey = nil
     self.IsDragging = false
@@ -1922,7 +1918,6 @@ function Baseline:HideAutocomplete()
     self.AutocompleteVisible = false
     self.AutocompleteUI.Visible = false
     self.AutocompleteHint.Visible = false
-    self.GhostTextLabel.Visible = false
     self.AutocompleteMatches = {}
     self.AutocompleteIndex = 1
 end
@@ -1937,7 +1932,7 @@ function Baseline:RenderAutocomplete()
     for i, match in ipairs(self.AutocompleteMatches) do
         local isSelected = (i == self.AutocompleteIndex)
         local rowFrame = Instance.new("Frame")
-        rowFrame.Size = UDim2.new(1, 0, 0, 22)
+        rowFrame.Size = UDim2.new(1, 0, 0, 24)
         rowFrame.BackgroundColor3 = isSelected and self.AutocompleteSelectionColor or self.AutocompleteBackgroundColor
         rowFrame.BorderSizePixel = 0
         rowFrame.Parent = self.AutocompleteScroll
@@ -1947,15 +1942,16 @@ function Baseline:RenderAutocomplete()
         btn.Text = ""
         btn.Parent = rowFrame
         local icon = Instance.new("ImageLabel")
-        icon.Size = UDim2.new(0, 14, 0, 14)
+        icon.Size = UDim2.new(0, 16, 0, 16)
         icon.Position = UDim2.new(0, 4, 0.5, 0)
         icon.AnchorPoint = Vector2.new(0, 0.5)
         icon.BackgroundTransparency = 1
         icon.Image = match.icon
+        icon.ResampleMode = Enum.ResamplerMode.Default
         icon.Parent = rowFrame
         local label = Instance.new("TextLabel")
         label.Size = UDim2.new(1, -28, 1, 0)
-        label.Position = UDim2.new(0, 24, 0, 0)
+        label.Position = UDim2.new(0, 26, 0, 0)
         label.BackgroundTransparency = 1
         label.Text = match.word
         label.TextColor3 = isSelected and self.AutocompleteSelectedTextColor or self.AutocompleteTextColor
@@ -1967,12 +1963,12 @@ function Baseline:RenderAutocomplete()
             self.AutocompleteIndex = i
             self:CommitAutocomplete()
         end)
-        yOffset = yOffset + 22
+        yOffset = yOffset + 24
     end
     self.AutocompleteScroll.CanvasSize = UDim2.new(0, 0, 0, yOffset)
     local scrollPos = self.AutocompleteScroll.CanvasPosition.Y
-    local btnTop = (self.AutocompleteIndex - 1) * 22
-    local btnBottom = btnTop + 22
+    local btnTop = (self.AutocompleteIndex - 1) * 24
+    local btnBottom = btnTop + 24
     if btnTop < scrollPos then
         self.AutocompleteScroll.CanvasPosition = Vector2.new(0, btnTop)
     elseif btnBottom > scrollPos + self.AutocompleteScroll.AbsoluteWindowSize.Y then
@@ -1987,9 +1983,18 @@ function Baseline:CommitAutocomplete()
     local word = Utils.getWordBeforeCursor(currentText, self.CursorIndex)
     local stringBefore = currentText:sub(1, self.CursorIndex - #word)
     local stringAfter = currentText:sub(self.CursorIndex + 1)
-    self.CanvasGroup:SetAttribute("Text", stringBefore .. match.word .. stringAfter)
-    self.CursorIndex = #stringBefore + #match.word
+    local insertWord = match.word
+    local offset = 0
+    if match.type == "Function" or match.type == "Constructor" then
+        if stringAfter:sub(1, 1) ~= "(" then
+            insertWord = insertWord .. "()"
+            offset = 1
+        end
+    end
+    self.CanvasGroup:SetAttribute("Text", stringBefore .. insertWord .. stringAfter)
+    self.CursorIndex = #stringBefore + #insertWord - offset
     self.SelectionStart = self.CursorIndex
+    self.IsTyping = false
     self:PushHistory()
     self:HideAutocomplete()
     self:UpdateBlinker(true)
@@ -1997,19 +2002,16 @@ function Baseline:CommitAutocomplete()
 end
 
 function Baseline:UpdateAutocompleteUI()
-    if not self.IsFocused or self.SelectionStart ~= self.CursorIndex then
+    if not self.IsFocused or not self.IsTyping or self.SelectionStart ~= self.CursorIndex then
         self:HideAutocomplete()
         return
     end
-    
     local text = self.CanvasGroup:GetAttribute("Text") or ""
     local word = Utils.getWordBeforeCursor(text, self.CursorIndex)
-    
     if #word < 1 then
         self:HideAutocomplete()
         return
     end
-    
     local dynamicMatches = {}
     for varName in text:gmatch("local%s+([%w_]+)") do
         dynamicMatches[varName] = "Variable"
@@ -2022,11 +2024,9 @@ function Baseline:UpdateAutocompleteUI()
             dynamicMatches[varName] = "Variable"
         end
     end
-    
     local matches = {}
     local wordLower = word:lower()
     local added = {}
-    
     local function addMatch(mWord, mType, mIcon)
         if added[mWord] then return end
         if mWord:lower():sub(1, #wordLower) == wordLower then
@@ -2034,26 +2034,21 @@ function Baseline:UpdateAutocompleteUI()
             added[mWord] = true
         end
     end
-    
     for dWord, dType in pairs(dynamicMatches) do
         addMatch(dWord, dType, Icons.Variable)
     end
-    
     for _, item in ipairs(Utils.AutocompleteKeywords) do
         addMatch(item.word, item.type, item.icon)
         if #matches >= 50 then break end
     end
-    
     if #matches == 0 then
         self:HideAutocomplete()
         return
     end
-
     if #matches == 1 and matches[1].word == word then
         self:HideAutocomplete()
         return
     end
-    
     self.AutocompleteMatches = matches
     self.AutocompleteIndex = math.clamp(self.AutocompleteIndex, 1, #matches)
     self:RenderAutocomplete()
@@ -2085,7 +2080,7 @@ function Baseline:ProcessKey(keyCode, isShiftDown, isCtrlDown)
             self:RenderAutocomplete()
             return
         elseif keyCode == Enum.KeyCode.Right then
-            if self.GhostTextLabel.Visible then
+            if match and match.word:lower():sub(1, #word) == word:lower() and #match.word > #word then
                 if self:CommitAutocomplete() then return end
             end
         elseif keyCode == Enum.KeyCode.Tab then
@@ -2098,12 +2093,14 @@ function Baseline:ProcessKey(keyCode, isShiftDown, isCtrlDown)
                 if self:CommitAutocomplete() then return end
             end
         elseif keyCode == Enum.KeyCode.Escape then
+            self.IsTyping = false
             self:HideAutocomplete()
             return
         end
     end
     
     if keyCode == Enum.KeyCode.Tab then
+        self.IsTyping = true
         if self.CanvasGroup:GetAttribute("MultiLine") then
             if isShiftDown then
                 local txt = self.CanvasGroup:GetAttribute("Text") or ""
@@ -2148,6 +2145,7 @@ function Baseline:ProcessKey(keyCode, isShiftDown, isCtrlDown)
         self:RemoveChar()
     elseif keyCode == Enum.KeyCode.Return or keyCode == Enum.KeyCode.KeypadEnter then
         if self.CanvasGroup:GetAttribute("MultiLine") then
+            self.IsTyping = true
             self.LastTypedChar = "\n"
             self.LastTypedTick = tick()
             if self.SelectionStart ~= self.CursorIndex then self:DeleteSelection() end
@@ -2187,6 +2185,7 @@ function Baseline:ProcessKey(keyCode, isShiftDown, isCtrlDown)
             end
         end
     elseif keyCode == Enum.KeyCode.Left then
+        self.IsTyping = false
         if isCtrlDown then
             self.CursorIndex = Utils.getPrevWordBoundary(displayedText, self.CursorIndex)
         elseif self.SelectionStart ~= self.CursorIndex and not isShiftDown then
@@ -2198,6 +2197,7 @@ function Baseline:ProcessKey(keyCode, isShiftDown, isCtrlDown)
         if not isShiftDown then self.SelectionStart = self.CursorIndex end
         self:UpdateBlinker(true)
     elseif keyCode == Enum.KeyCode.Right then
+        self.IsTyping = false
         if isCtrlDown then
             self.CursorIndex = Utils.getNextWordBoundary(displayedText, self.CursorIndex)
         elseif self.SelectionStart ~= self.CursorIndex and not isShiftDown then
@@ -2209,6 +2209,7 @@ function Baseline:ProcessKey(keyCode, isShiftDown, isCtrlDown)
         if not isShiftDown then self.SelectionStart = self.CursorIndex end
         self:UpdateBlinker(true)
     elseif keyCode == Enum.KeyCode.Up then
+        self.IsTyping = false
         local font = self.CanvasGroup:GetAttribute("Font")
         local textSize = self.CanvasGroup:GetAttribute("TextSize")
         local lineMap = self:GetLineMapCached(displayedText, textSize, font, self:GetLimit())
@@ -2234,6 +2235,7 @@ function Baseline:ProcessKey(keyCode, isShiftDown, isCtrlDown)
         if not isShiftDown then self.SelectionStart = self.CursorIndex end
         self:UpdateBlinker(true)
     elseif keyCode == Enum.KeyCode.Down then
+        self.IsTyping = false
         local font = self.CanvasGroup:GetAttribute("Font")
         local textSize = self.CanvasGroup:GetAttribute("TextSize")
         local lineMap = self:GetLineMapCached(displayedText, textSize, font, self:GetLimit())
@@ -2259,6 +2261,7 @@ function Baseline:ProcessKey(keyCode, isShiftDown, isCtrlDown)
         if not isShiftDown then self.SelectionStart = self.CursorIndex end
         self:UpdateBlinker(true)
     elseif keyCode == Enum.KeyCode.Home then
+        self.IsTyping = false
         if isCtrlDown then
             self.CursorIndex = 0
         else
@@ -2275,6 +2278,7 @@ function Baseline:ProcessKey(keyCode, isShiftDown, isCtrlDown)
         if not isShiftDown then self.SelectionStart = self.CursorIndex end
         self:UpdateBlinker(true)
     elseif keyCode == Enum.KeyCode.End then
+        self.IsTyping = false
         if isCtrlDown then
             self.CursorIndex = #displayedText
         else
@@ -2291,6 +2295,7 @@ function Baseline:ProcessKey(keyCode, isShiftDown, isCtrlDown)
         if not isShiftDown then self.SelectionStart = self.CursorIndex end
         self:UpdateBlinker(true)
     elseif keyCode == Enum.KeyCode.PageUp or keyCode == Enum.KeyCode.PageDown then
+        self.IsTyping = false
         local font = self.CanvasGroup:GetAttribute("Font")
         local textSize = self.CanvasGroup:GetAttribute("TextSize")
         local lineMap = self:GetLineMapCached(displayedText, textSize, font, self:GetLimit())
@@ -2331,6 +2336,7 @@ function Baseline:DeleteSelection()
 end
 
 function Baseline:AppendText(character)
+    self.IsTyping = true
     local maxLength = self.CanvasGroup:GetAttribute("MaxLength")
     if maxLength and maxLength > 0 then
         local currentLength = utf8.len(self.CanvasGroup:GetAttribute("Text") or "")
@@ -2367,6 +2373,7 @@ function Baseline:AppendText(character)
 end
 
 function Baseline:RemoveChar()
+    self.IsTyping = true
     if self.SelectionStart ~= self.CursorIndex then
         self:DeleteSelection()
         return
@@ -2617,10 +2624,6 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
     self.PlaceholderLabel.TextSize = editorTextSize
     self.PlaceholderLabel.Font = editorFont
     self.PlaceholderLabel.Visible = rawEditorText == ""
-    
-    self.GhostTextLabel.TextSize = editorTextSize
-    self.GhostTextLabel.Font = editorFont
-    
     local lineNumbersMarginWidth = 0
     if hasLineNumbers then
         local lineCountEstimate = 1
@@ -2708,6 +2711,23 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
     else
         self.CurrentLineHighlight.Visible = false
     end
+    self:UpdateAutocompleteUI()
+    local hasGhostText = false
+    local ghostTextStr = ""
+    if self.IsFocused and self.AutocompleteVisible and #self.AutocompleteMatches > 0 then
+        local match = self.AutocompleteMatches[self.AutocompleteIndex]
+        if match then
+            local currentWord = Utils.getWordBeforeCursor(displayedText, self.CursorIndex)
+            local afterChar = displayedText:sub(self.CursorIndex + 1, self.CursorIndex + 1)
+            if currentWord ~= "" and match.word:lower():sub(1, #currentWord) == currentWord:lower() and #match.word > #currentWord and (afterChar == "" or afterChar:match("[%s%p]")) then
+                ghostTextStr = match.word:sub(#currentWord + 1)
+                if match.type == "Function" or match.type == "Constructor" then
+                    ghostTextStr = ghostTextStr .. "()"
+                end
+                hasGhostText = true
+            end
+        end
+    end
     local viewportStartY = scrollOffsetY
     local viewportEndY = scrollOffsetY + viewportHeight + 16
     local visibleLinesCount = 0
@@ -2777,6 +2797,12 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
                 textLabelObj.TextSize = editorTextSize
                 textLabelObj.TextColor3 = editorTextColor
                 local richTextStr = self:ApplySyntaxCached(lineData, stringOnLine, syntaxStateStr)
+                if hasGhostText and self.CursorIndex >= (lineData.startIdx - 1) and self.CursorIndex <= lineData.endIdx then
+                    local lcIdx = self.CursorIndex - lineData.startIdx + 1
+                    local textBefore = stringOnLine:sub(1, lcIdx)
+                    local textAfter = stringOnLine:sub(lcIdx + 1)
+                    richTextStr = self:ApplySyntax(textBefore, syntaxStateStr) .. '<font color="#787878">' .. Utils.escapeRichText(ghostTextStr) .. '</font>' .. self:ApplySyntax(textAfter, "none")
+                end
                 if lineData.isFolded then
                     richTextStr = richTextStr .. ' <font color="#888888">...</font>'
                 end
@@ -3042,14 +3068,11 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
     self.BlinkTimer = 0
     if self.IsFocused then self.Blinker.Visible = self.SelectionStart == self.CursorIndex end
 
-    self:UpdateAutocompleteUI()
     if self.AutocompleteVisible and #self.AutocompleteMatches > 0 then
         local absX = (4 + currentCursorX) - scrollOffsetX
         local absY = (4 + currentCursorY + currentCursorHeight) - scrollOffsetY + 4
-        
-        local dynamicHeight = math.min(#self.AutocompleteMatches * 22, 160)
+        local dynamicHeight = math.min(#self.AutocompleteMatches * 24, 160)
         self.AutocompleteUI.Size = UDim2.new(0, 260, 0, dynamicHeight)
-        
         if absY + dynamicHeight > self.CanvasGroup.AbsoluteSize.Y then
             absY = (4 + currentCursorY) - scrollOffsetY - dynamicHeight - 4
         end
@@ -3058,28 +3081,13 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
         if match then
             self.AutocompleteHintText.Text = match.type
             local bounds = Utils.getTextSize(match.type, 14, Enum.Font.RobotoMono, Vector2.new(1000, 22))
-            self.AutocompleteHint.Size = UDim2.new(0, bounds.X + 16, 0, 22)
-            local rowRelativeY = (self.AutocompleteIndex - 1) * 22 - self.AutocompleteScroll.CanvasPosition.Y
+            self.AutocompleteHint.Size = UDim2.new(0, bounds.X + 16, 0, 24)
+            local rowRelativeY = (self.AutocompleteIndex - 1) * 24 - self.AutocompleteScroll.CanvasPosition.Y
             self.AutocompleteHint.Position = UDim2.new(1, 1, 0, rowRelativeY)
             self.AutocompleteHint.Visible = true
-            
-            local currentWord = Utils.getWordBeforeCursor(displayedText, self.CursorIndex)
-            local afterChar = displayedText:sub(self.CursorIndex + 1, self.CursorIndex + 1)
-            
-            if currentWord ~= "" and match.word:lower():sub(1, #currentWord) == currentWord:lower() and #match.word > #currentWord and (afterChar == "" or afterChar:match("[%s%p]")) then
-                local ghostString = match.word:sub(#currentWord + 1)
-                self.GhostTextLabel.Text = ghostString
-                self.GhostTextLabel.Position = UDim2.new(0, 4 + currentCursorX, 0, 4 + currentCursorY)
-                self.GhostTextLabel.Visible = true
-            else
-                self.GhostTextLabel.Visible = false
-            end
-        else
-            self.GhostTextLabel.Visible = false
         end
     else
         self.AutocompleteHint.Visible = false
-        self.GhostTextLabel.Visible = false
     end
 end
 
