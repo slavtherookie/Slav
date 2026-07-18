@@ -5,7 +5,6 @@ ShadowModule.__index = ShadowModule
 
 local DEFAULT_IMAGE = "rbxassetid://125999138090687"
 local DEFAULT_SLICE_CENTER = Rect.new(160, 160, 352, 352)
-
 local Defaults = {
 	Image = DEFAULT_IMAGE,
 	ImageColor3 = Color3.new(0, 0, 0),
