@@ -4,17 +4,33 @@ local branch = "main"
 local pathBase = "main/Paper/loads/"
 
 local function GetGithubFile(path)
-	return string.format("https://raw.githubusercontent.com/%s/%s/refs/heads/%s/%s%s", creator, githubrepo, branch, pathBase, path)
+	return string.format("https://raw.githubusercontent.com/%s/%s/%s/%s%s", creator, githubrepo, branch, pathBase, path)
 end
 
--- [ AUTO-EXECUTE ON REJOIN / SERVER HOP ]
-local teleportFunc = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or (getgenv and getgenv().queue_on_teleport)
+local teleportFunc = queue_on_teleport
+	or (syn and syn.queue_on_teleport)
+	or (fluxus and fluxus.queue_on_teleport)
+	or (getgenv and getgenv().queue_on_teleport)
+
 if teleportFunc then
 	local execStr = string.format([[
-		task.wait(1)
-		loadstring(game:HttpGet("https://raw.githubusercontent.com/%s/%s/refs/heads/%s/%smain.luau"))()
-	]], creator, githubrepo, branch, pathBase)
-	pcall(function() teleportFunc(execStr) end)
+		task.wait(2.5)
+
+		local success, result = pcall(game.HttpGet, game,
+			"https://raw.githubusercontent.com/%s/%s/%s/main/Paper.luau"
+		)
+
+		if success and result then
+			local fn = loadstring(result)
+			if type(fn) == "function" then
+				fn()
+			end
+		end
+	]], creator, githubrepo, branch)
+
+	pcall(function()
+		teleportFunc(execStr)
+	end)
 end
 
 local Players = game:GetService("Players")
@@ -25,6 +41,7 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local ContentProvider = game:GetService("ContentProvider")
 local Workspace = game:GetService("Workspace")
+local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
 local guiName = "PaperAdmin"
@@ -52,10 +69,7 @@ local settingsOpen = false
 local activeSuggestions = {}
 local CommandRegistry = {}
 
-local tooltipConn
-local suggConn
-local dragConn
-local keybindConn
+local tooltipConn, suggConn, dragConn, keybindConn
 
 local MAIN_ICON = "rbxassetid://84021105793570"
 local NOTIF_ICON = "rbxassetid://91047500682054"
@@ -67,7 +81,7 @@ local LOADER_ICON = "rbxassetid://135205586099792"
 
 task.spawn(function()
 	local iconsToCheck = {MAIN_ICON, NOTIF_ICON, GITHUB_ICON, CLOSE_ICON, SETTINGS_ICON, BACK_ICON, LOADER_ICON}
-	for _, id in pairs(iconsToCheck) do
+	for _, id in ipairs(iconsToCheck) do
 		pcall(function()
 			local temp = Instance.new("ImageLabel")
 			temp.Image = id
@@ -195,8 +209,7 @@ local function CreateLargeNotification(titleText, descText, iconId)
 			dInput = input
 		end
 	end)
-	local dConn
-	dConn = UserInputService.InputChanged:Connect(function(input)
+	local dConn = UserInputService.InputChanged:Connect(function(input)
 		if input == dInput and drag then
 			local delta = input.Position - dStart
 			bg.Position = UDim2.new(sPos.X.Scale, sPos.X.Offset + delta.X, sPos.Y.Scale, sPos.Y.Offset + delta.Y)
@@ -315,7 +328,7 @@ local function UpdateNotifPosition()
 			end
 		end
 	end
-	TweenService:Create(NotifContainer, smoothTween, {Position = UDim2.new(1, -20, 1, targetY)}):Play()
+	pcall(function() TweenService:Create(NotifContainer, smoothTween, {Position = UDim2.new(1, -20, 1, targetY)}):Play() end)
 end
 
 SuggestionsContainer:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateNotifPosition)
@@ -393,16 +406,16 @@ local function Notify(title, text, iconId)
 	local function closeNotif()
 		if closed then return end
 		closed = true
-		TweenService:Create(Frame, smoothTween, {Size = UDim2.new(1, 0, 0, 0)}):Play()
-		task.delay(0.4, function() Frame:Destroy() end)
+		pcall(function() TweenService:Create(Frame, smoothTween, {Size = UDim2.new(1, 0, 0, 0)}):Play() end)
+		task.delay(0.4, function() pcall(function() Frame:Destroy() end) end)
 	end
 	
 	CloseBtn.MouseButton1Click:Connect(closeNotif)
-	CloseBtn.MouseEnter:Connect(function() TweenService:Create(CloseBtn, fastTween, {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play() end)
-	CloseBtn.MouseLeave:Connect(function() TweenService:Create(CloseBtn, fastTween, {ImageColor3 = Color3.fromRGB(180, 180, 180)}):Play() end)
+	CloseBtn.MouseEnter:Connect(function() pcall(function() TweenService:Create(CloseBtn, fastTween, {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play() end) end)
+	CloseBtn.MouseLeave:Connect(function() pcall(function() TweenService:Create(CloseBtn, fastTween, {ImageColor3 = Color3.fromRGB(180, 180, 180)}):Play() end) end)
 	AddTooltip(CloseBtn, "Dismiss")
 	
-	TweenService:Create(Frame, smoothTween, {Size = UDim2.new(1, 0, 0, 56)}):Play()
+	pcall(function() TweenService:Create(Frame, smoothTween, {Size = UDim2.new(1, 0, 0, 56)}):Play() end)
 	task.delay(6, closeNotif)
 end
 
@@ -514,7 +527,7 @@ local ProfilePic = Instance.new("ImageLabel", SettingsPanel)
 ProfilePic.Size = UDim2.new(0, 36, 0, 36)
 ProfilePic.Position = UDim2.new(0, 12, 0, 12)
 ProfilePic.BackgroundTransparency = 1
-ProfilePic.Image = Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
+pcall(function() ProfilePic.Image = Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48) end)
 local PPCorner = Instance.new("UICorner", ProfilePic)
 PPCorner.CornerRadius = UDim.new(1, 0)
 
@@ -547,11 +560,12 @@ MainPanel.InputBegan:Connect(function(input)
 		dragStart = input.Position
 		startPos = MainPanel.Position
 		UpdateNotifPosition()
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then
-				dragging = false
-			end
-		end)
+	end
+end)
+
+MainPanel.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = false
 	end
 end)
 
@@ -569,25 +583,27 @@ dragConn = UserInputService.InputChanged:Connect(function(input)
 end)
 
 local function UpdateUIState()
-	if isExpanded then
-		local targetPos = isDragged and MainPanel.Position or UDim2.new(1, -20, 1, -20)
-		TweenService:Create(MainPanel, smoothTween, {Size = UDim2.new(0, 380, 0, 320), Position = targetPos}):Play()
-		TweenService:Create(ExpandedContent, smoothTween, {GroupTransparency = 0}):Play()
-	elseif isFocused or isHovered or settingsOpen then
-		isDragged = false
-		local targetHeight = settingsOpen and 100 or 42
-		TweenService:Create(MainPanel, smoothTween, {Size = UDim2.new(0, 280, 0, targetHeight), Position = UDim2.new(1, -20, 1, -20)}):Play()
-		TweenService:Create(ExpandedContent, smoothTween, {GroupTransparency = 1}):Play()
-	else
-		isDragged = false
-		TweenService:Create(MainPanel, smoothTween, {Size = UDim2.new(0, 280, 0, 42), Position = UDim2.new(1, -20, 1, 60)}):Play()
-		TweenService:Create(ExpandedContent, smoothTween, {GroupTransparency = 1}):Play()
-		if settingsOpen then
-			settingsOpen = false
-			TweenService:Create(SettingsPanel, smoothTween, {Position = UDim2.new(1, 0, 0, 0)}):Play()
+	pcall(function()
+		if isExpanded then
+			local targetPos = isDragged and MainPanel.Position or UDim2.new(1, -20, 1, -20)
+			TweenService:Create(MainPanel, smoothTween, {Size = UDim2.new(0, 380, 0, 320), Position = targetPos}):Play()
+			TweenService:Create(ExpandedContent, smoothTween, {GroupTransparency = 0}):Play()
+		elseif isFocused or isHovered or settingsOpen then
+			isDragged = false
+			local targetHeight = settingsOpen and 100 or 42
+			TweenService:Create(MainPanel, smoothTween, {Size = UDim2.new(0, 280, 0, targetHeight), Position = UDim2.new(1, -20, 1, -20)}):Play()
+			TweenService:Create(ExpandedContent, smoothTween, {GroupTransparency = 1}):Play()
+		else
+			isDragged = false
+			TweenService:Create(MainPanel, smoothTween, {Size = UDim2.new(0, 280, 0, 42), Position = UDim2.new(1, -20, 1, 60)}):Play()
+			TweenService:Create(ExpandedContent, smoothTween, {GroupTransparency = 1}):Play()
+			if settingsOpen then
+				settingsOpen = false
+				TweenService:Create(SettingsPanel, smoothTween, {Position = UDim2.new(1, 0, 0, 0)}):Play()
+			end
 		end
-	end
-	UpdateNotifPosition()
+		UpdateNotifPosition()
+	end)
 end
 
 local PaperAPI = {
@@ -607,15 +623,18 @@ local PaperAPI = {
 local success, result = pcall(function()
 	local src = game:HttpGet(GetGithubFile("Utils/commands.luau"))
 	local fn = loadstring(src)
-	if fn then 
+	if type(fn) == "function" then 
 		return fn 
 	else
-		error("Failed to compile commands.luau")
+		error("Failed to compile commands.luau: " .. tostring(fn))
 	end
 end)
 
 if success and type(result) == "function" then
-	pcall(result, PaperAPI)
+	local apiSuccess, apiErr = pcall(result, PaperAPI)
+	if not apiSuccess then
+		Notify("Error", "Execution error in commands: " .. tostring(apiErr))
+	end
 else
 	Notify("Error", "Failed to load commands script: " .. tostring(result))
 end
@@ -638,7 +657,6 @@ local function PopulateCommandList()
 		T.Size = UDim2.new(1, -24, 0, 16)
 		T.BackgroundTransparency = 1
 		
-		-- Format name with aliases to make it obvious they exist
 		local aliasText = ""
 		if cmd.Aliases and #cmd.Aliases > 0 then
 			aliasText = " [" .. table.concat(cmd.Aliases, ", ") .. "]"
@@ -675,25 +693,25 @@ HoverZone.MouseLeave:Connect(function()
 	UpdateUIState()
 end)
 
-SettingsBtn.MouseEnter:Connect(function() TweenService:Create(SettingsBtn, fastTween, {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play() end)
-SettingsBtn.MouseLeave:Connect(function() TweenService:Create(SettingsBtn, fastTween, {ImageColor3 = Color3.fromRGB(180, 180, 180)}):Play() end)
+SettingsBtn.MouseEnter:Connect(function() pcall(function() TweenService:Create(SettingsBtn, fastTween, {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play() end) end)
+SettingsBtn.MouseLeave:Connect(function() pcall(function() TweenService:Create(SettingsBtn, fastTween, {ImageColor3 = Color3.fromRGB(180, 180, 180)}):Play() end) end)
 
 SettingsBtn.MouseButton1Click:Connect(function()
 	settingsOpen = true
 	UpdateUIState()
-	TweenService:Create(SettingsPanel, smoothTween, {Position = UDim2.new(0, 0, 0, 0)}):Play()
+	pcall(function() TweenService:Create(SettingsPanel, smoothTween, {Position = UDim2.new(0, 0, 0, 0)}):Play() end)
 end)
 
 SettingsBackBtn.MouseButton1Click:Connect(function()
 	settingsOpen = false
 	UpdateUIState()
-	TweenService:Create(SettingsPanel, smoothTween, {Position = UDim2.new(1, 0, 0, 0)}):Play()
+	pcall(function() TweenService:Create(SettingsPanel, smoothTween, {Position = UDim2.new(1, 0, 0, 0)}):Play() end)
 end)
 
 local function ClearSuggestions()
 	for _, child in ipairs(activeSuggestions) do
-		TweenService:Create(child, fastTween, {Size = UDim2.new(1, 0, 0, 0)}):Play()
-		task.delay(0.2, function() child:Destroy() end)
+		pcall(function() TweenService:Create(child, fastTween, {Size = UDim2.new(1, 0, 0, 0)}):Play() end)
+		task.delay(0.2, function() pcall(function() child:Destroy() end) end)
 	end
 	activeSuggestions = {}
 end
@@ -753,10 +771,9 @@ local function CreateSuggestion(iconId, titleText, subText, autoFillText)
 	AddTooltip(ClickBtn, "Click to auto-fill")
 	
 	table.insert(activeSuggestions, Frame)
-	TweenService:Create(Frame, smoothTween, {Size = UDim2.new(1, 0, 0, 44)}):Play()
+	pcall(function() TweenService:Create(Frame, smoothTween, {Size = UDim2.new(1, 0, 0, 44)}):Play() end)
 end
 
--- Helper to check if what user is typing matches a Command Name OR one of its Aliases (e.g. typing "unwi" will match "unwireframe")
 local function IsCommandMatch(cmd, query)
 	if string.sub(cmd.Name, 1, #query) == query then 
 		return true, cmd.Name 
@@ -790,7 +807,6 @@ TextBox:GetPropertyChangedSignal("Text"):Connect(function()
 			local match, matchStr = IsCommandMatch(cmd, cmdQuery)
 			if match then
 				if count >= 4 then break end
-				-- Uses the exact string that matched (whether command name or alias) for the autofill
 				CreateSuggestion(MAIN_ICON, matchStr .. " " .. cmd.ArgHint, cmd.Description, matchStr .. " ")
 				count += 1
 			end
@@ -812,8 +828,10 @@ TextBox:GetPropertyChangedSignal("Text"):Connect(function()
 				for _, p in ipairs(Players:GetPlayers()) do
 					if string.find(string.lower(p.Name), playerQuery) or string.find(string.lower(p.DisplayName), playerQuery) then
 						if count >= 4 then break end
-						local thumb = Players:GetUserThumbnailAsync(p.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
-						CreateSuggestion(thumb, p.DisplayName, "@" .. p.Name, args[1] .. " " .. p.Name .. " ")
+						pcall(function()
+							local thumb = Players:GetUserThumbnailAsync(p.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
+							CreateSuggestion(thumb, p.DisplayName, "@" .. p.Name, args[1] .. " " .. p.Name .. " ")
+						end)
 						count += 1
 					end
 				end
@@ -890,7 +908,7 @@ keybindConn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		isFocused = true
 		if settingsOpen then
 			settingsOpen = false
-			TweenService:Create(SettingsPanel, smoothTween, {Position = UDim2.new(1, 0, 0, 0)}):Play()
+			pcall(function() TweenService:Create(SettingsPanel, smoothTween, {Position = UDim2.new(1, 0, 0, 0)}):Play() end)
 		end
 		UpdateUIState()
 		task.delay(0.01, function()
@@ -903,8 +921,10 @@ end)
 PopulateCommandList()
 
 local function fetchSources()
-	local s1, r1 = pcall(function() return game:HttpGet(GetGithubFile("main.luau")) end)
-	local s2, r2 = pcall(function() return game:HttpGet(GetGithubFile("Utils/commands.luau")) end)
+	local urlMain = GetGithubFile("main.luau")
+	local urlCmds = GetGithubFile("Utils/commands.luau")
+	local s1, r1 = pcall(function() return game:HttpGet(urlMain) end)
+	local s2, r2 = pcall(function() return game:HttpGet(urlCmds) end)
 	return s1 and r1 or "", s2 and r2 or ""
 end
 
@@ -914,8 +934,8 @@ task.spawn(function()
 	while task.wait(15) do
 		local curMain, curCmds = fetchSources()
 		if (curMain ~= "" and curMain ~= initialMain) or (curCmds ~= "" and curCmds ~= initialCmds) then
-			local loadFn = loadstring(curMain)
-			if loadFn then
+			local successFn, loadFn = pcall(function() return loadstring(curMain) end)
+			if successFn and type(loadFn) == "function" then
 				Notify("Update", "Changes have been pulled, now updating...", MAIN_ICON)
 				task.wait(2.5)
 				
@@ -926,7 +946,7 @@ task.spawn(function()
 				
 				if ScreenGui then ScreenGui:Destroy() end
 				
-				loadFn()
+				pcall(loadFn)
 				break
 			else
 				initialMain = curMain
@@ -980,22 +1000,24 @@ task.spawn(function()
 	LCredit2.TextSize = 12
 	LCredit2.TextTransparency = 1
 
-	TweenService:Create(LIcon, smoothTween, {ImageTransparency = 0}):Play()
-	task.wait(0.4)
-	TweenService:Create(LCredit1, smoothTween, {TextTransparency = 0}):Play()
-	TweenService:Create(LCredit2, smoothTween, {TextTransparency = 0}):Play()
-	task.wait(1.5)
-	TweenService:Create(LIcon, smoothTween, {ImageTransparency = 1}):Play()
-	TweenService:Create(LCredit1, smoothTween, {TextTransparency = 1}):Play()
-	TweenService:Create(LCredit2, smoothTween, {TextTransparency = 1}):Play()
-	task.wait(0.3)
-	TweenService:Create(LoaderPanel, smoothTween, {Size = UDim2.new(0, 280, 0, 0)}):Play()
-	task.wait(0.4)
-	LoaderPanel:Destroy()
+	pcall(function()
+		TweenService:Create(LIcon, smoothTween, {ImageTransparency = 0}):Play()
+		task.wait(0.4)
+		TweenService:Create(LCredit1, smoothTween, {TextTransparency = 0}):Play()
+		TweenService:Create(LCredit2, smoothTween, {TextTransparency = 0}):Play()
+		task.wait(1.5)
+		TweenService:Create(LIcon, smoothTween, {ImageTransparency = 1}):Play()
+		TweenService:Create(LCredit1, smoothTween, {TextTransparency = 1}):Play()
+		TweenService:Create(LCredit2, smoothTween, {TextTransparency = 1}):Play()
+		task.wait(0.3)
+		TweenService:Create(LoaderPanel, smoothTween, {Size = UDim2.new(0, 280, 0, 0)}):Play()
+		task.wait(0.4)
+		LoaderPanel:Destroy()
+	end)
 	
 	loaded = true
 	HoverZone.Visible = true
 	Watermark.Visible = true
 	UpdateUIState()
-		Notify("Paper", "Loaded Successfully! Auto-execute enabled.", MAIN_ICON)
+	Notify("Paper", "Loaded Successfully! Auto-execute enabled.", MAIN_ICON)
 end)
