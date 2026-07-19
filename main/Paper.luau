@@ -214,6 +214,7 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = guiName
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 999999999
 ScreenGui.Parent = targetGui
 
 local function CreateLargeNotification(titleText, descText, iconId)
