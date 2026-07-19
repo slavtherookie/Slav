@@ -59,7 +59,7 @@ You can load RDI directly using:
 
 ```lua
 local url = "https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/RDI/RobloxRDI.luau"
-
+--asodkop smth rq
 local success, result = pcall(function()
 	return loadstring(game:HttpGet(url))()
 end)
