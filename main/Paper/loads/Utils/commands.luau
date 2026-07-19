@@ -1,5 +1,4 @@
-
-local DEBUG_MODE = true
+local DEBUG_MODE = false
 
 local function DebugPrint(msg)
     if DEBUG_MODE then
@@ -759,6 +758,11 @@ end)
 RegisterCommand("notepad", {"notes"}, "", "none", "Notepad editor", function()
     Notify("Loading", "Notepad...")
     RunGitScript("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/Paper/loads/Utils/extras/Notepad.luau")
+end)
+
+RegisterCommand("dex", {"onion", "paperonion"}, "", "none", "Loads Onion Engine", function()
+    Notify("Loading", "Onion Engine...")
+    RunGitScript("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/main/modulars/OnionEngine.luau")
 end)
 
 RegisterCommand("cmds", {"help"}, "", "none", "Commands UI", function()
