@@ -1983,7 +1983,7 @@ function Baseline:RenderAutocomplete()
     for i, match in ipairs(self.AutocompleteMatches) do
         local isSelected = (i == self.AutocompleteIndex)
         local rowFrame = Instance.new("Frame")
-        rowFrame.Size = UDim2.new(1, 0, 0, 22)
+        rowFrame.Size = UDim2.new(1, 0, 0, 24)
         rowFrame.BackgroundColor3 = isSelected and self.AutocompleteSelectionColor or self.AutocompleteBackgroundColor
         rowFrame.BorderSizePixel = 0
         rowFrame.Parent = self.AutocompleteScroll
@@ -1993,15 +1993,16 @@ function Baseline:RenderAutocomplete()
         btn.Text = ""
         btn.Parent = rowFrame
         local icon = Instance.new("ImageLabel")
-        icon.Size = UDim2.new(0, 14, 0, 14)
-        icon.Position = UDim2.new(0, 4, 0.5, 0)
+        icon.Size = UDim2.new(0, 16, 0, 16)
+        icon.Position = UDim2.new(0, 6, 0.5, 0)
         icon.AnchorPoint = Vector2.new(0, 0.5)
         icon.BackgroundTransparency = 1
         icon.Image = match.icon
+        icon.ResampleMode = Enum.ResamplerMode.Default
         icon.Parent = rowFrame
         local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, -28, 1, 0)
-        label.Position = UDim2.new(0, 24, 0, 0)
+        label.Size = UDim2.new(1, -30, 1, 0)
+        label.Position = UDim2.new(0, 28, 0, 0)
         label.BackgroundTransparency = 1
         label.Text = match.word
         label.TextColor3 = isSelected and self.AutocompleteSelectedTextColor or self.AutocompleteTextColor
@@ -2017,8 +2018,8 @@ function Baseline:RenderAutocomplete()
     end
     self.AutocompleteScroll.CanvasSize = UDim2.new(0, 0, 0, yOffset)
     local scrollPos = self.AutocompleteScroll.CanvasPosition.Y
-    local btnTop = (self.AutocompleteIndex - 1) * 22
-    local btnBottom = btnTop + 22
+    local btnTop = (self.AutocompleteIndex - 1) * 24
+    local btnBottom = btnTop + 24
     if btnTop < scrollPos then
         self.AutocompleteScroll.CanvasPosition = Vector2.new(0, btnTop)
     elseif btnBottom > scrollPos + self.AutocompleteScroll.AbsoluteWindowSize.Y then
@@ -2057,13 +2058,17 @@ function Baseline:UpdateAutocompleteUI()
     end
     
     local dynamicMatches = {}
-    for varName in text:gmatch("local%s+([%w_]+)") do
+    local searchStart = math.max(1, self.CursorIndex - 15000)
+    local searchEnd = math.min(#text, self.CursorIndex + 15000)
+    local searchChunk = text:sub(searchStart, searchEnd)
+    
+    for varName in searchChunk:gmatch("local%s+([%w_]+)") do
         dynamicMatches[varName] = "Variable"
     end
-    for funcName in text:gmatch("function%s+([%w_]+)") do
+    for funcName in searchChunk:gmatch("function%s+([%w_]+)") do
         dynamicMatches[funcName] = "Function"
     end
-    for varName in text:gmatch("([%w_]+)%s*=") do
+    for varName in searchChunk:gmatch("([%w_]+)%s*=") do
         if not dynamicMatches[varName] then
             dynamicMatches[varName] = "Variable"
         end
@@ -2462,11 +2467,7 @@ function Baseline:GetLimit()
     if self.CanvasGroup:GetAttribute("Lines") then
         local font = self.CanvasGroup:GetAttribute("Font") or Enum.Font.RobotoMono
         local textSize = self.CanvasGroup:GetAttribute("TextSize") or 16
-        local textForLines = self:GetDisplayText()
-        local lineCountEstimate = 1
-        for _ in string.gmatch(textForLines, "\n") do
-            lineCountEstimate = lineCountEstimate + 1
-        end
+        local lineCountEstimate = self.CachedLineMap and #self.CachedLineMap or 1000
         local charWidth = Utils.getTextSize("A", textSize, font, Vector2.new(10000, 10000)).X
         local numberWidth = #(tostring(lineCountEstimate)) * charWidth
         numberMarginWidth = math.max(35, numberWidth + 28)
@@ -2625,21 +2626,22 @@ end
 
 function Baseline:GetClosestIndexInLine(lineData, targetX, text, textSize, font)
     if targetX < 0 then targetX = 0 end
-    local bestIndexFound = lineData.startIdx - 1
-    local minDistanceX = math.huge
-    local rEnd = lineData.renderEndIdx or lineData.endIdx
     local charWidth = Utils.getTextSize("A", textSize, font, Vector2.new(10000, 10000)).X
-    for index = lineData.startIdx - 1, rEnd do
-        local subString = (lineData.startIdx <= index) and text:sub(lineData.startIdx, index) or ""
-        local length = utf8.len(subString) or #subString
-        local textXSize = length * charWidth
-        local distanceX = math.abs(textXSize - targetX)
-        if distanceX < minDistanceX then
-            minDistanceX = distanceX
-            bestIndexFound = index
-        end
+    if charWidth <= 0 then charWidth = 8 end
+    local rEnd = lineData.renderEndIdx or lineData.endIdx
+    local lineStr = text:sub(lineData.startIdx, rEnd)
+    local lineLength = utf8.len(lineStr) or #lineStr
+    
+    local clickedIndex = math.floor((targetX / charWidth) + 0.5)
+    if clickedIndex < 0 then clickedIndex = 0 end
+    if clickedIndex > lineLength then clickedIndex = lineLength end
+    
+    local byteOffset = utf8.offset(lineStr, clickedIndex + 1)
+    if byteOffset then
+        return lineData.startIdx - 1 + byteOffset - 1
+    else
+        return rEnd
     end
-    return bestIndexFound
 end
 
 function Baseline:GetClosestCursorIndex(clickX, clickY)
@@ -2686,8 +2688,7 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
     
     local lineNumbersMarginWidth = 0
     if hasLineNumbers then
-        local lineCountEstimate = 1
-        for _ in string.gmatch(displayedText, "\n") do lineCountEstimate = lineCountEstimate + 1 end
+        local lineCountEstimate = self.CachedLineMap and #self.CachedLineMap or 1000
         local charWidth = Utils.getTextSize("A", editorTextSize, editorFont, Vector2.new(10000, 10000)).X
         local numberWidth = #(tostring(lineCountEstimate)) * charWidth
         lineNumbersMarginWidth = math.max(35, numberWidth + 28)
@@ -2724,7 +2725,9 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
                 activeLineNumber = lastSeenLineNumber
                 local rEnd = lineData.renderEndIdx or lineData.endIdx
                 local cursorSubstring = (lineData.startIdx <= self.CursorIndex) and displayedText:sub(lineData.startIdx, math.min(self.CursorIndex, rEnd)) or ""
-                currentCursorX = Utils.getTextSize(cursorSubstring, editorTextSize, editorFont, Vector2.new(10000, 10000)).X
+                local charWidth = Utils.getTextSize("A", editorTextSize, editorFont, Vector2.new(10000, 10000)).X
+                local length = utf8.len(cursorSubstring) or #cursorSubstring
+                currentCursorX = length * charWidth
                 currentCursorY = lineData.y
                 currentCursorHeight = lineData.height
                 break
@@ -2954,24 +2957,28 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
                         local highlightEnd = math.min(rEndLocal, endIndex)
                         local highlightOffsetX = 0
                         local highlightWidth = 0
+                        local charWidth = Utils.getTextSize("A", editorTextSize, editorFont, Vector2.new(10000, 10000)).X
                         if highlightStart <= highlightEnd then
                             local stringBeforeHighlight = displayedText:sub(lineData.startIdx, highlightStart - 1)
-                            highlightOffsetX = Utils.getTextSize(stringBeforeHighlight, editorTextSize, editorFont, Vector2.new(10000, 10000)).X
+                            local bLen = utf8.len(stringBeforeHighlight) or #stringBeforeHighlight
+                            highlightOffsetX = bLen * charWidth
                             local stringUpToTarget = displayedText:sub(lineData.startIdx, highlightEnd)
-                            highlightWidth = Utils.getTextSize(stringUpToTarget, editorTextSize, editorFont, Vector2.new(10000, 10000)).X - highlightOffsetX
+                            local tLen = utf8.len(stringUpToTarget) or #stringUpToTarget
+                            highlightWidth = (tLen * charWidth) - highlightOffsetX
                         else
                             local stringBeforeHighlight = (lineData.startIdx <= rEndLocal) and displayedText:sub(lineData.startIdx, rEndLocal) or ""
-                            highlightOffsetX = Utils.getTextSize(stringBeforeHighlight, editorTextSize, editorFont, Vector2.new(10000, 10000)).X
+                            local bLen = utf8.len(stringBeforeHighlight) or #stringBeforeHighlight
+                            highlightOffsetX = bLen * charWidth
                         end
                         if endIndex >= lineData.endIdx and lineData.endIdx ~= #displayedText then
                             if highlightStart > lineData.endIdx then
-                                highlightWidth = 5
+                                highlightWidth = charWidth
                             else
-                                local dotsWidth = lineData.isFolded and Utils.getTextSize(" ...", editorTextSize, editorFont, Vector2.new(10000, 10000)).X or 5
+                                local dotsWidth = lineData.isFolded and (4 * charWidth) or charWidth
                                 highlightWidth = highlightWidth + dotsWidth
                             end
                         elseif lineData.isFolded and endIndex >= rEndLocal then
-                            local dotsWidth = Utils.getTextSize(" ...", editorTextSize, editorFont, Vector2.new(10000, 10000)).X
+                            local dotsWidth = 4 * charWidth
                             highlightWidth = highlightWidth + dotsWidth
                         end
                         if highlightWidth > 0 then
@@ -3151,7 +3158,7 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
         local absX = (4 + currentCursorX) - scrollOffsetX
         local absY = (4 + currentCursorY + currentCursorHeight) - scrollOffsetY + 4
         
-        local dynamicHeight = math.min(#self.AutocompleteMatches * 22, 160)
+        local dynamicHeight = math.min(#self.AutocompleteMatches * 24, 160)
         self.AutocompleteUI.Size = UDim2.new(0, 260, 0, dynamicHeight)
         
         if absY + dynamicHeight > self.CanvasGroup.AbsoluteSize.Y then
@@ -3161,9 +3168,9 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
         local match = self.AutocompleteMatches[self.AutocompleteIndex]
         if match then
             self.AutocompleteHintText.Text = match.type
-            local bounds = Utils.getTextSize(match.type, 14, Enum.Font.RobotoMono, Vector2.new(1000, 22))
-            self.AutocompleteHint.Size = UDim2.new(0, bounds.X + 16, 0, 22)
-            local rowRelativeY = (self.AutocompleteIndex - 1) * 22 - self.AutocompleteScroll.CanvasPosition.Y
+            local bounds = Utils.getTextSize(match.type, 14, Enum.Font.RobotoMono, Vector2.new(1000, 24))
+            self.AutocompleteHint.Size = UDim2.new(0, bounds.X + 16, 0, 24)
+            local rowRelativeY = (self.AutocompleteIndex - 1) * 24 - self.AutocompleteScroll.CanvasPosition.Y
             self.AutocompleteHint.Position = UDim2.new(1, 1, 0, rowRelativeY)
             self.AutocompleteHint.Visible = true
             
