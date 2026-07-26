@@ -12,7 +12,6 @@ local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
 
 local guiHolder = pcall(function() return CoreGui.Name end) and CoreGui or LocalPlayer:WaitForChild("PlayerGui")
 
@@ -166,9 +165,10 @@ end
 
 local function checkMouseInGui(gui)
 	if gui == nil then return false end
+	local mouseLoc = UserInputService:GetMouseLocation()
 	local guiPosition = gui.AbsolutePosition
 	local guiSize = gui.AbsoluteSize	
-	return Mouse.X >= guiPosition.X and Mouse.X < guiPosition.X + guiSize.X and Mouse.Y >= guiPosition.Y and Mouse.Y < guiPosition.Y + guiSize.Y
+	return mouseLoc.X >= guiPosition.X and mouseLoc.X < guiPosition.X + guiSize.X and mouseLoc.Y >= guiPosition.Y and mouseLoc.Y < guiPosition.Y + guiSize.Y
 end
 
 local function buttonAnim(button, data)
@@ -177,21 +177,30 @@ local function buttonAnim(button, data)
 	local mode = data and data.Mode or 1
 	local control = {}
 
+	if mode == 2 then
+		local lerpTo = data.LerpTo or Color3.new(0, 0, 0)
+		local delta = data.LerpDelta or 0.2
+		control.StartColor = data.StartColor or button.BackgroundColor3
+		control.PressColor = data.PressColor or control.StartColor:lerp(lerpTo, delta)
+		control.HoverColor = data.HoverColor or control.StartColor:lerp(control.PressColor, 0.6)
+		control.OutlineColor = data.OutlineColor
+	end
+
 	button.InputBegan:Connect(function(input)
 		if disabled then return end
 		if input.UserInputType == Enum.UserInputType.MouseMovement and not holding then
 			if mode == 1 then
-				button.BackgroundTransparency = 0.5
+				button.BackgroundTransparency = 0.4
 			elseif mode == 2 then
-				button.BackgroundColor3 = sspdockcontainer.Theme.ButtonHover
+				button.BackgroundColor3 = control.HoverColor
 			end
 		elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
 			holding = true
 			if mode == 1 then
 				button.BackgroundTransparency = 0
 			elseif mode == 2 then
-				button.BackgroundColor3 = sspdockcontainer.Theme.ButtonPress
-				button.BorderColor3 = sspdockcontainer.Theme.ButtonPress
+				button.BackgroundColor3 = control.PressColor
+				if control.OutlineColor then button.BorderColor3 = control.PressColor end
 			end
 		end
 	end)
@@ -202,15 +211,15 @@ local function buttonAnim(button, data)
 			if mode == 1 then
 				button.BackgroundTransparency = 1
 			elseif mode == 2 then
-				button.BackgroundColor3 = sspdockcontainer.Theme.TopBar
+				button.BackgroundColor3 = control.StartColor
 			end
 		elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
 			holding = false
 			if mode == 1 then
-				button.BackgroundTransparency = checkMouseInGui(button) and 0.5 or 1
+				button.BackgroundTransparency = checkMouseInGui(button) and 0.4 or 1
 			elseif mode == 2 then
-				button.BackgroundColor3 = checkMouseInGui(button) and sspdockcontainer.Theme.ButtonHover or sspdockcontainer.Theme.TopBar
-				button.BorderColor3 = sspdockcontainer.Theme.Outline
+				button.BackgroundColor3 = checkMouseInGui(button) and control.HoverColor or control.StartColor
+				if control.OutlineColor then button.BorderColor3 = control.OutlineColor end
 			end
 		end
 	end)
@@ -221,7 +230,7 @@ local function buttonAnim(button, data)
 		if mode == 1 then
 			button.BackgroundTransparency = 1
 		elseif mode == 2 then
-			button.BackgroundColor3 = sspdockcontainer.Theme.TopBar
+			button.BackgroundColor3 = control.StartColor
 		end
 	end
 
@@ -291,10 +300,11 @@ local function resizeHook(self, resizer, dir)
 	local guiMain = self.GuiElems.Main
 	resizer.InputBegan:Connect(function(input)
 		if not self.Dragging and not self.Resizing and self.Resizable and self.ResizableInternal then
-			local isH = dir:find("[WE]") and true
 			local isV = dir:find("[NS]") and true
-			local signX = dir:find("W", 1, true) and -1 or 1
-			local signY = dir:find("N", 1, true) and -1 or 1
+			local signX = 0
+			if dir:find("W") then signX = -1 elseif dir:find("E") then signX = 1 end
+			local signY = 0
+			if dir:find("N") then signY = -1 elseif dir:find("S") then signY = 1 end
 
 			if self.Minimized and isV then return end
 
@@ -306,7 +316,8 @@ local function resizeHook(self, resizer, dir)
 				self.Resizing = resizer
 				resizer.BackgroundTransparency = 1
 
-				local startMouseX, startMouseY = Mouse.X, Mouse.Y
+				local startMouseLoc = UserInputService:GetMouseLocation()
+				local startMouseX, startMouseY = startMouseLoc.X, startMouseLoc.Y
 				local startSizeX, startSizeY = self.SizeX, self.SizeY
 				local startPosX, startPosY = guiMain.AbsolutePosition.X, guiMain.AbsolutePosition.Y
 
@@ -323,8 +334,9 @@ local function resizeHook(self, resizer, dir)
 					if self.Resizable and self.ResizableInternal and inp.UserInputType == Enum.UserInputType.MouseMovement then
 						self:StopTweens()
 
-						local deltaX = inp.Position.X - startMouseX
-						local deltaY = inp.Position.Y - startMouseY
+						local currMouseLoc = UserInputService:GetMouseLocation()
+						local deltaX = currMouseLoc.X - startMouseX
+						local deltaY = currMouseLoc.Y - startMouseY
 
 						local newSizeX = startSizeX + (deltaX * signX)
 						local newSizeY = startSizeY + (deltaY * signY)
@@ -384,13 +396,13 @@ local function updateSideFrames(noTween)
 		end
 		insertTween(leftSide.Frame, sideTweenInfo, {Position = leftPos})
 		insertTween(rightSide.Frame, sideTweenInfo, {Position = rightPos})
-		insertTween(sidesGui.LeftToggle, sideTweenInfo, {Position = UDim2.new(0, #leftSide.Windows == 0 and -16 or 0, 0, -36)})
-		insertTween(sidesGui.RightToggle, sideTweenInfo, {Position = UDim2.new(1, #rightSide.Windows == 0 and 0 or -16, 0, -36)})
+		insertTween(sidesGui.LeftToggle, sideTweenInfo, {Position = UDim2.new(0, #leftSide.Windows == 0 and -16 or 0, 0, 0)})
+		insertTween(sidesGui.RightToggle, sideTweenInfo, {Position = UDim2.new(1, #rightSide.Windows == 0 and 0 or -16, 0, 0)})
 	else
 		leftSide.Frame.Position = leftPos
 		rightSide.Frame.Position = rightPos
-		sidesGui.LeftToggle.Position = UDim2.new(0, #leftSide.Windows == 0 and -16 or 0, 0, -36)
-		sidesGui.RightToggle.Position = UDim2.new(1, #rightSide.Windows == 0 and 0 or -16, 0, -36)
+		sidesGui.LeftToggle.Position = UDim2.new(0, #leftSide.Windows == 0 and -16 or 0, 0, 0)
+		sidesGui.RightToggle.Position = UDim2.new(1, #rightSide.Windows == 0 and 0 or -16, 0, 0)
 	end
 end
 
@@ -426,7 +438,8 @@ local function sideResizerHook(resizer, dir, side, pos)
 				side.Resizing = resizer
 				resizer.BackgroundColor3 = sspdockcontainer.Theme.ButtonPress
 
-				local startMouse = Mouse[dir == "V" and "Y" or "X"]
+				local startLoc = UserInputService:GetMouseLocation()
+				local startMouse = dir == "V" and startLoc.Y or startLoc.X
 				local startSizes = {}
 				for i, w in pairs(windows) do startSizes[i] = w.SizeY end
 				local startWidth = side.Width
@@ -448,8 +461,11 @@ local function sideResizerHook(resizer, dir, side, pos)
 						return
 					end
 					if inp.UserInputType == Enum.UserInputType.MouseMovement then
+						local currLoc = UserInputService:GetMouseLocation()
+						local currMouse = dir == "V" and currLoc.Y or currLoc.X
+						
 						if dir == "V" then
-							local delta = inp.Position.Y - startMouse
+							local delta = currMouse - startMouse
 							if delta > 0 then
 								local neededSize = delta
 								for i = pos + 1, #windows do
@@ -476,7 +492,7 @@ local function sideResizerHook(resizer, dir, side, pos)
 						elseif dir == "H" then
 							local maxWidth = math.max(300, sidesGui.AbsoluteSize.X - static.FreeWidth)
 							local otherSide = (side == leftSide and rightSide or leftSide)
-							local delta = inp.Position.X - startMouse
+							local delta = currMouse - startMouse
 							delta = (side == leftSide and delta or -delta)
 
 							local proposedSize = math.max(static.MinWidth, startWidth + delta)
@@ -551,33 +567,31 @@ local function renderSide(side, noTween)
 end
 
 local function updateSide(side, noTween)
-	local oldHeight = 0
-	local currentPos = 0
-	local neededSize = 0
 	local windows = side.Windows
-	local height = sidesGui.AbsoluteSize.Y - (math.max(0, #windows - 1) * 4)
+	if #windows == 0 then return end
 
-	for i, v in pairs(windows) do oldHeight = oldHeight + v.SizeY end
-	for i, v in pairs(windows) do
+	local height = sidesGui.AbsoluteSize.Y - (#windows - 1) * 4
+	if height < #windows * 100 then height = #windows * 100 end
+
+	local oldHeight = 0
+	for _, v in pairs(windows) do 
+		oldHeight = oldHeight + math.max(v.SizeY, v.MinY or 100) 
+	end
+
+	local currentPos = 0
+	for i, v in ipairs(windows) do
+		local minSize = v.MinY or 100
+		local targetSize
 		if i == #windows then
-			v.SizeY = height - currentPos
-			neededSize = math.max(0, (v.MinY or 100) - v.SizeY)
+			targetSize = height - currentPos
 		else
-			v.SizeY = math.max(math.floor(v.SizeY / oldHeight * height), v.MinY or 100)
+			targetSize = math.floor((math.max(v.SizeY, minSize) / oldHeight) * height)
 		end
+		
+		v.SizeY = math.max(targetSize, minSize)
 		currentPos = currentPos + v.SizeY
 	end
-
-	if neededSize > 0 then
-		for i = #windows - 1, 1, -1 do
-			local window = windows[i]
-			local newSize = math.max(window.SizeY - neededSize, (window.MinY or 100))
-			neededSize = neededSize - (window.SizeY - newSize)
-			window.SizeY = newSize
-		end
-		local lastWindow = windows[#windows]
-		lastWindow.SizeY = (lastWindow.MinY or 100) - neededSize
-	end
+	
 	renderSide(side, noTween)
 end
 
@@ -645,8 +659,9 @@ local function createGui(self)
 			local releaseEvent, mouseEvent
 			local initX = guiMain.AbsolutePosition.X
 			local initY = guiMain.AbsolutePosition.Y
-			local offX = Mouse.X - initX
-			local offY = Mouse.Y - initY
+			local mouseLoc = UserInputService:GetMouseLocation()
+			local offX = mouseLoc.X - initX
+			local offY = mouseLoc.Y - initY
 			local alignInsertPos, alignInsertSide
 			
 			if not self.Aligned then
@@ -671,24 +686,24 @@ local function createGui(self)
 
 			mouseEvent = UserInputService.InputChanged:Connect(function(inp)
 				if inp.UserInputType == Enum.UserInputType.MouseMovement and self.Draggable and not self.Closed then
+					local currLoc = UserInputService:GetMouseLocation()
 					if self.Aligned then
 						if leftSide.Resizing or rightSide.Resizing then return end
-						local posX, posY = inp.Position.X - offX, inp.Position.Y - offY
+						local posX, posY = currLoc.X - offX, currLoc.Y - offY
 						local delta = math.sqrt((posX - initX)^2 + (posY - initY)^2)
 						if delta >= 5 then
 							self:SetAligned(false)
 						end
 					else
-						local inputX, inputY = inp.Position.X, inp.Position.Y
-						local posX, posY = inputX - offX, inputY - offY
+						local posX, posY = currLoc.X - offX, currLoc.Y - offY
 						if posY < 0 then posY = 0 end
 						guiMain.Position = UDim2.new(0, posX, 0, posY)
 
 						if self.Resizable and self.Alignable then
 							local maxX = sidesGui.AbsoluteSize.X
-							if inputX < 25 then
+							if currLoc.X < 25 then
 								if sideHasRoom(leftSide, self.MinY or 100) then
-									local insertPos, range = getSideInsertPos(leftSide, inputY)
+									local insertPos, range = getSideInsertPos(leftSide, currLoc.Y)
 									alignIndicator.Indicator.Position = UDim2.new(0, 0, 0, range[1])
 									alignIndicator.Indicator.Size = UDim2.new(0, leftSide.Width, 0, range[2] - range[1])
 									alignIndicator.Parent = guiHolder
@@ -696,9 +711,9 @@ local function createGui(self)
 									alignInsertSide = "left"
 									return
 								end
-							elseif inputX >= maxX - 25 then
+							elseif currLoc.X >= maxX - 25 then
 								if sideHasRoom(rightSide, self.MinY or 100) then
-									local insertPos, range = getSideInsertPos(rightSide, inputY)
+									local insertPos, range = getSideInsertPos(rightSide, currLoc.Y)
 									alignIndicator.Indicator.Position = UDim2.new(0, maxX - rightSide.Width, 0, range[1])
 									alignIndicator.Indicator.Size = UDim2.new(0, rightSide.Width, 0, range[2] - range[1])
 									alignIndicator.Parent = guiHolder
@@ -1117,17 +1132,17 @@ function sspdockcontainer.Init()
 	alignIndicator.IgnoreGuiInset = true
 	
 	local indicator = Instance.new("Frame", alignIndicator)
-	indicator.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+	indicator.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
 	indicator.BorderSizePixel = 0
 	indicator.BackgroundTransparency = 0.5
 	indicator.Name = "Indicator"
 	local corner = Instance.new("UICorner", indicator)
 	corner.CornerRadius = UDim.new(0, 10)
 
-	local leftToggle = create({{1, "TextButton", {AutoButtonColor=false, BackgroundColor3=theme.TopBar, BorderColor3=theme.Outline, BorderMode=2, Font=10, Name="LeftToggle", Position=UDim2.new(0, 0, 0, -36), Size=UDim2.new(0, 16, 0, 36), Text="<", TextColor3=theme.Text, TextSize=14}}})
+	local leftToggle = create({{1, "TextButton", {AutoButtonColor=false, BackgroundColor3=theme.TopBar, BorderColor3=theme.Outline, BorderMode=2, Font=10, Name="LeftToggle", Position=UDim2.new(0, 0, 0, 0), Size=UDim2.new(0, 16, 0, 36), Text="<", TextColor3=theme.Text, TextSize=14}}})
 	local rightToggle = leftToggle:Clone()
 	rightToggle.Name = "RightToggle"
-	rightToggle.Position = UDim2.new(1, -16, 0, -36)
+	rightToggle.Position = UDim2.new(1, -16, 0, 0)
 	
 	buttonAnim(leftToggle, {Mode = 2, StartColor = theme.TopBar, HoverColor = theme.ButtonHover, PressColor = theme.ButtonPress, OutlineColor = theme.TopBar})
 	buttonAnim(rightToggle, {Mode = 2, StartColor = theme.TopBar, HoverColor = theme.ButtonHover, PressColor = theme.ButtonPress, OutlineColor = theme.TopBar})
