@@ -198,9 +198,11 @@ end
 local function getSideInsertPos(side, curY)
 	local pos = #side.Windows + 1
 	local range = {0, sidesGui.AbsoluteSize.Y}
+	local currentY = 0
 
-	for i, v in pairs(side.Windows) do
-		local midPos = v.PosY + v.SizeY/2
+	for i, v in ipairs(side.Windows) do
+		local nextY = currentY + v.SizeY
+		local midPos = currentY + (v.SizeY / 2)
 		if curY <= midPos then
 			pos = i
 			range[2] = midPos
@@ -208,6 +210,7 @@ local function getSideInsertPos(side, curY)
 		else
 			range[1] = midPos
 		end
+		currentY = nextY + 4
 	end
 	return pos, range
 end
@@ -238,6 +241,7 @@ local function resizeHook(self, resizer, dir)
 			if input.UserInputType == Enum.UserInputType.MouseMovement then
 				resizer.BackgroundTransparency = 0.5
 			elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+				moveToTop(self)
 				local releaseEvent, mouseEvent
 				self.Resizing = resizer
 				resizer.BackgroundTransparency = 1
@@ -535,7 +539,7 @@ local function createGui(self)
 	local theme = sspdockcontainer.Theme
 	local gui = create({
 		{1, "ScreenGui", {Name="Window"}},
-		{2, "Frame", {Active=true, BackgroundTransparency=1, BorderSizePixel=0, Name="Main", Parent={1}, Position=UDim2.new(0.4, 0, 0.4, 0), Size=UDim2.new(0, 300, 0, 300)}},
+		{2, "Frame", {Active=true, BackgroundTransparency=1, BorderSizePixel=0, Name="Main", Parent={1}, Position=UDim2.new(0.4, 0, 0.4, 0), Size=UDim2.new(0, 300, 0, 300), ClipsDescendants=true}},
 		{3, "Frame", {BackgroundColor3=theme.Background, BorderSizePixel=0, Name="Content", Parent={2}, Position=UDim2.new(0, 0, 0, 20), Size=UDim2.new(1, 0, 1, -20), ClipsDescendants=true}},
 		{4, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={3}, Size=UDim2.new(1, 0, 0, 1)}},
 		{5, "Frame", {BackgroundColor3=theme.TopBar, BorderSizePixel=0, Name="TopBar", Parent={2}, Size=UDim2.new(1, 0, 0, 20)}},
@@ -561,7 +565,6 @@ local function createGui(self)
 	local guiMain = gui.Main
 	local guiTopBar = guiMain.TopBar
 	local guiResizeControls = guiMain.ResizeControls
-	local guiDragging = false
 
 	self.GuiElems.Main = guiMain
 	self.GuiElems.TopBar = guiMain.TopBar
@@ -576,20 +579,19 @@ local function createGui(self)
 
 	guiTopBar.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 and self.Draggable then
+			moveToTop(self)
 			local releaseEvent, mouseEvent
 			local maxX = sidesGui.AbsoluteSize.X
-			
-			local startMouseX, startMouseY = Mouse.X, Mouse.Y
-			local startPosX, startPosY = guiMain.AbsolutePosition.X, guiMain.AbsolutePosition.Y
+			local initX = guiMain.AbsolutePosition.X
+			local initY = guiMain.AbsolutePosition.Y
+			local offX = Mouse.X - initX
+			local offY = Mouse.Y - initY
 			local alignInsertPos, alignInsertSide
-
-			guiDragging = true
 
 			releaseEvent = UserInputService.InputEnded:Connect(function(inp)
 				if inp.UserInputType == Enum.UserInputType.MouseButton1 then
 					releaseEvent:Disconnect()
 					mouseEvent:Disconnect()
-					guiDragging = false
 					alignIndicator.Parent = nil
 					if alignInsertSide then
 						local targetSide = (alignInsertSide == "left" and leftSide) or (alignInsertSide == "right" and rightSide)
@@ -602,37 +604,33 @@ local function createGui(self)
 				if inp.UserInputType == Enum.UserInputType.MouseMovement and self.Draggable and not self.Closed then
 					if self.Aligned then
 						if leftSide.Resizing or rightSide.Resizing then return end
-						local delta = math.sqrt((inp.Position.X - startMouseX)^2 + (inp.Position.Y - startMouseY)^2)
+						local posX, posY = inp.Position.X - offX, inp.Position.Y - offY
+						local delta = math.sqrt((posX - initX)^2 + (posY - initY)^2)
 						if delta >= 5 then
 							self:SetAligned(false)
-							startMouseX, startMouseY = Mouse.X, Mouse.Y
-							startPosX, startPosY = guiMain.AbsolutePosition.X, guiMain.AbsolutePosition.Y
 						end
 					else
-						local deltaX = inp.Position.X - startMouseX
-						local deltaY = inp.Position.Y - startMouseY
-						local newPosX = startPosX + deltaX
-						local newPosY = startPosY + deltaY
-
-						if newPosY < 0 then newPosY = 0 end
-						guiMain.Position = UDim2.new(0, newPosX, 0, newPosY)
+						local inputX, inputY = inp.Position.X, inp.Position.Y
+						local posX, posY = inputX - offX, inputY - offY
+						if posY < 0 then posY = 0 end
+						guiMain.Position = UDim2.new(0, posX, 0, posY)
 
 						if self.Resizable and self.Alignable then
-							if inp.Position.X < 25 then
+							if inputX < 25 then
 								if sideHasRoom(leftSide, self.MinY or 100) then
-									local insertPos, range = getSideInsertPos(leftSide, inp.Position.Y)
-									alignIndicator.Indicator.Position = UDim2.new(0, -15, 0, range[1])
-									alignIndicator.Indicator.Size = UDim2.new(0, 40, 0, range[2] - range[1])
+									local insertPos, range = getSideInsertPos(leftSide, inputY)
+									alignIndicator.Indicator.Position = UDim2.new(0, 0, 0, range[1])
+									alignIndicator.Indicator.Size = UDim2.new(0, leftSide.Width, 0, range[2] - range[1])
 									alignIndicator.Parent = guiHolder
 									alignInsertPos = insertPos
 									alignInsertSide = "left"
 									return
 								end
-							elseif inp.Position.X >= maxX - 25 then
+							elseif inputX >= maxX - 25 then
 								if sideHasRoom(rightSide, self.MinY or 100) then
-									local insertPos, range = getSideInsertPos(rightSide, inp.Position.Y)
-									alignIndicator.Indicator.Position = UDim2.new(0, maxX - 25, 0, range[1])
-									alignIndicator.Indicator.Size = UDim2.new(0, 40, 0, range[2] - range[1])
+									local insertPos, range = getSideInsertPos(rightSide, inputY)
+									alignIndicator.Indicator.Position = UDim2.new(0, maxX - rightSide.Width, 0, range[1])
+									alignIndicator.Indicator.Size = UDim2.new(0, rightSide.Width, 0, range[2] - range[1])
 									alignIndicator.Parent = guiHolder
 									alignInsertPos = insertPos
 									alignInsertSide = "right"
@@ -770,14 +768,26 @@ function funcs:SetAligned(val)
 	self:SetResizableInternal(not val)
 	self.GuiElems.Main.Active = not val
 	self.GuiElems.Main.Outlines.Visible = not val
+	
 	if not val then
 		for i, v in pairs(leftSide.Windows) do if v == self then table.remove(leftSide.Windows, i) break end end
 		for i, v in pairs(rightSide.Windows) do if v == self then table.remove(rightSide.Windows, i) break end end
+		
+		if self.UndockedSizeX and self.UndockedSizeY then
+			self.SizeX = self.UndockedSizeX
+			self.SizeY = self.UndockedSizeY
+			self.GuiElems.Main.Size = UDim2.new(0, self.SizeX, 0, self.SizeY)
+		end
+		
 		if not table.find(visibleWindows, self) then table.insert(visibleWindows, 1, self) end
 		self.GuiElems.Minimize.ImageLabel.Image = "rbxassetid://5034768003"
 		self.Side = nil
 		updateWindows()
 	else
+		if not self.UndockedSizeX then
+			self.UndockedSizeX = self.SizeX
+			self.UndockedSizeY = self.SizeY
+		end
 		self:SetMinimized(false, 3)
 		for i, v in pairs(visibleWindows) do if v == self then table.remove(visibleWindows, i) break end end
 		self.GuiElems.Minimize.ImageLabel.Image = "rbxassetid://5448127505"
@@ -799,6 +809,11 @@ end
 
 function funcs:AlignTo(side, pos, size, silent)
 	if table.find(side.Windows, self) or self.Closed then return end
+
+	if not self.Aligned then
+		self.UndockedSizeX = self.SizeX
+		self.UndockedSizeY = self.SizeY
+	end
 
 	size = size or self.SizeY
 	if size > 0 and size <= 1 then
@@ -844,27 +859,23 @@ function funcs:Close()
 
 	if not self.Aligned then
 		self:StopTweens()
-		local ti = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-
+		local ti = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 		local closeTime = tick()
 		self.LastClose = closeTime
 
-		self:DoTween(self.GuiElems.Main, ti, {Size = UDim2.new(0, self.SizeX, 0, 20)})
-		self:DoTween(self.GuiElems.Title, ti, {TextTransparency = 1})
-		self:DoTween(self.GuiElems.Minimize.ImageLabel, ti, {ImageTransparency = 1})
-		self:DoTween(self.GuiElems.Close.ImageLabel, ti, {ImageTransparency = 1})
-		RunService.RenderStepped:Wait()
-		if closeTime ~= self.LastClose then return end
-
-		self:DoTween(self.GuiElems.TopBar, ti, {BackgroundTransparency = 1})
-		self:DoTween(self.GuiElems.Outlines, ti, {ImageTransparency = 1})
-		RunService.RenderStepped:Wait()
-		if closeTime ~= self.LastClose then return end
+		self:DoTween(self.GuiElems.Main, ti, {Size = UDim2.new(0, self.SizeX, 0, 0)})
+		
+		task.spawn(function()
+			task.wait(0.25)
+			if closeTime == self.LastClose then
+				self.Gui.Parent = nil
+				updateWindows(true)
+			end
+		end)
+	else
+		self.Gui.Parent = nil
+		updateWindows(true)
 	end
-
-	self.Aligned = false
-	self.Gui.Parent = nil
-	updateWindows(true)
 end
 
 funcs.Hide = funcs.Close
@@ -905,7 +916,7 @@ end
 function funcs:Show(data)
 	data = data or {}
 	local align = data.Align
-	local pos = data.Pos
+	local position = data.Pos
 	local size = data.Size
 	local targetSide = (align == "left" and leftSide) or (align == "right" and rightSide)
 
@@ -934,7 +945,7 @@ function funcs:Show(data)
 	self.CloseAnim.Enable()
 
 	if align then
-		self:AlignTo(targetSide, pos, size, data.Silent)
+		self:AlignTo(targetSide, position, size, data.Silent)
 	else
 		if align == nil and self.ClosedSide then
 			self:AlignTo(self.ClosedSide, self.SidePos, size, true)
@@ -942,8 +953,8 @@ function funcs:Show(data)
 		else
 			if table.find(visibleWindows, self) then return end
 
-			self.GuiElems.Main.Size = UDim2.new(0, self.SizeX, 0, 20)
-			local ti = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+			self.GuiElems.Main.Size = UDim2.new(0, self.SizeX, 0, 0)
+			local ti = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 			self:StopTweens()
 			self:DoTween(self.GuiElems.Main, ti, {Size = UDim2.new(0, self.SizeX, 0, self.SizeY)})
 
@@ -999,26 +1010,28 @@ function sspdockcontainer.Init()
 	local theme = sspdockcontainer.Theme
 
 	local leftFrame = create({
-		{1, "Frame", {Active=true, Name="LeftSide", BackgroundColor3=theme.Background, BorderSizePixel=0}},
+		{1, "Frame", {Active=true, Name="LeftSide", BackgroundColor=theme.Background, BorderSizePixel=0}},
 		{2, "TextButton", {AutoButtonColor=false, BackgroundColor3=theme.ResizeHandle, BorderSizePixel=0, Font=3, Name="Resizer", Parent={1}, Size=UDim2.new(0, 5, 1, 0), Text="", TextSize=14}},
 		{3, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={2}, Position=UDim2.new(0, 0, 0, 0), Size=UDim2.new(0, 1, 1, 0)}},
 		{4, "TextButton", {AutoButtonColor=false, BackgroundColor3=theme.ResizeHandle, BorderSizePixel=0, Font=3, Name="WindowResizer", Parent={1}, Position=UDim2.new(1, -300, 0, 0), Size=UDim2.new(1, 0, 0, 4), Text="", TextSize=14}},
 		{5, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={4}, Size=UDim2.new(1, 0, 0, 1)}}
 	})
 	leftSide.Frame = leftFrame
+	leftFrame.BackgroundColor3 = theme.Background
 	leftFrame.Position = UDim2.new(0, -leftSide.Width - 10, 0, 0)
 	leftSide.WindowResizer = leftFrame.WindowResizer
 	leftFrame.WindowResizer.Parent = nil
 	leftFrame.Parent = sidesGui
 
 	local rightFrame = create({
-		{1, "Frame", {Active=true, Name="RightSide", BackgroundColor3=theme.Background, BorderSizePixel=0}},
+		{1, "Frame", {Active=true, Name="RightSide", BackgroundColor=theme.Background, BorderSizePixel=0}},
 		{2, "TextButton", {AutoButtonColor=false, BackgroundColor3=theme.ResizeHandle, BorderSizePixel=0, Font=3, Name="Resizer", Parent={1}, Size=UDim2.new(0, 5, 1, 0), Text="", TextSize=14}},
 		{3, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={2}, Position=UDim2.new(0, 4, 0, 0), Size=UDim2.new(0, 1, 1, 0)}},
 		{4, "TextButton", {AutoButtonColor=false, BackgroundColor3=theme.ResizeHandle, BorderSizePixel=0, Font=3, Name="WindowResizer", Parent={1}, Position=UDim2.new(1, -300, 0, 0), Size=UDim2.new(1, 0, 0, 4), Text="", TextSize=14}},
 		{5, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={4}, Size=UDim2.new(1, 0, 0, 1)}}
 	})
 	rightSide.Frame = rightFrame
+	rightFrame.BackgroundColor3 = theme.Background
 	rightFrame.Position = UDim2.new(1, 10, 0, 0)
 	rightSide.WindowResizer = rightFrame.WindowResizer
 	rightFrame.WindowResizer.Parent = nil
@@ -1033,7 +1046,7 @@ function sspdockcontainer.Init()
 	local indicator = Instance.new("Frame", alignIndicator)
 	indicator.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 	indicator.BorderSizePixel = 0
-	indicator.BackgroundTransparency = 0.8
+	indicator.BackgroundTransparency = 0.5
 	indicator.Name = "Indicator"
 	local corner = Instance.new("UICorner", indicator)
 	corner.CornerRadius = UDim.new(0, 10)
