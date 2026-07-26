@@ -11,6 +11,29 @@ local Mouse = LocalPlayer:GetMouse()
 
 local guiHolder = pcall(function() return CoreGui.Name end) and CoreGui or LocalPlayer:WaitForChild("PlayerGui")
 
+sspdockcontainer.Theme = {
+	Background = Color3.fromRGB(45, 45, 45),
+	TopBar = Color3.fromRGB(52, 52, 52),
+	Outline = Color3.fromRGB(33, 33, 33),
+	Button = Color3.fromRGB(60, 60, 60),
+	ButtonHover = Color3.fromRGB(68, 68, 68),
+	ButtonPress = Color3.fromRGB(40, 40, 40),
+	Text = Color3.fromRGB(255, 255, 255),
+	ResizeHandle = Color3.fromRGB(65, 65, 65)
+}
+
+function sspdockcontainer.SetTheme(baseColor)
+	local h, s, v = baseColor:ToHSV()
+	local function shift(dv) return Color3.fromHSV(h, s, math.clamp(v + dv, 0, 1)) end
+	sspdockcontainer.Theme.Background = baseColor
+	sspdockcontainer.Theme.TopBar = shift(0.03)
+	sspdockcontainer.Theme.Outline = shift(-0.05)
+	sspdockcontainer.Theme.Button = shift(0.06)
+	sspdockcontainer.Theme.ButtonHover = shift(0.09)
+	sspdockcontainer.Theme.ButtonPress = shift(-0.02)
+	sspdockcontainer.Theme.ResizeHandle = shift(0.08)
+end
+
 local function create(data)
 	local insts = {}
 	for i, v in pairs(data) do insts[v[1]] = Instance.new(v[2]) end
@@ -60,15 +83,6 @@ local function checkMouseInGui(gui)
 	local guiSize = gui.AbsoluteSize	
 	return Mouse.X >= guiPosition.X and Mouse.X < guiPosition.X + guiSize.X and Mouse.Y >= guiPosition.Y and Mouse.Y < guiPosition.Y + guiSize.Y
 end
-
-local theme = {
-	MainColor1 = Color3.fromRGB(52, 52, 52),
-	MainColor2 = Color3.fromRGB(45, 45, 45),
-	Button = Color3.fromRGB(60, 60, 60),
-	ButtonHover = Color3.fromRGB(68, 68, 68),
-	ButtonPress = Color3.fromRGB(40, 40, 40),
-	Outline2 = Color3.fromRGB(55, 55, 55)
-}
 
 local function buttonAnim(button, data)
 	local holding = false
@@ -225,11 +239,12 @@ local function resizeHook(self, resizer, dir)
 				resizer.BackgroundTransparency = 0.5
 			elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
 				local releaseEvent, mouseEvent
-				local offX = Mouse.X - resizer.AbsolutePosition.X
-				local offY = Mouse.Y - resizer.AbsolutePosition.Y
-
 				self.Resizing = resizer
 				resizer.BackgroundTransparency = 1
+
+				local startMouseX, startMouseY = Mouse.X, Mouse.Y
+				local startSizeX, startSizeY = self.SizeX, self.SizeY
+				local startPosX, startPosY = guiMain.AbsolutePosition.X, guiMain.AbsolutePosition.Y
 
 				releaseEvent = UserInputService.InputEnded:Connect(function(inp)
 					if inp.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -243,17 +258,32 @@ local function resizeHook(self, resizer, dir)
 				mouseEvent = UserInputService.InputChanged:Connect(function(inp)
 					if self.Resizable and self.ResizableInternal and inp.UserInputType == Enum.UserInputType.MouseMovement then
 						self:StopTweens()
-						local deltaX = inp.Position.X - resizer.AbsolutePosition.X - offX
-						local deltaY = inp.Position.Y - resizer.AbsolutePosition.Y - offY
 
-						if guiMain.AbsoluteSize.X + deltaX*signX < self.MinX then deltaX = signX*(self.MinX - guiMain.AbsoluteSize.X) end
-						if guiMain.AbsoluteSize.Y + deltaY*signY < self.MinY then deltaY = signY*(self.MinY - guiMain.AbsoluteSize.Y) end
-						if signY < 0 and guiMain.AbsolutePosition.Y + deltaY < 0 then deltaY = -guiMain.AbsolutePosition.Y end
+						local deltaX = inp.Position.X - startMouseX
+						local deltaY = inp.Position.Y - startMouseY
 
-						guiMain.Position = guiMain.Position + UDim2.new(0, (signX < 0 and deltaX or 0), 0, (signY < 0 and deltaY or 0))
-						self.SizeX = self.SizeX + (isH and deltaX*signX or 0)
-						self.SizeY = self.SizeY + (isV and deltaY*signY or 0)
-						guiMain.Size = UDim2.new(0, self.SizeX, 0, self.Minimized and 20 or self.SizeY)
+						local newSizeX = startSizeX + (deltaX * signX)
+						local newSizeY = startSizeY + (deltaY * signY)
+						local newPosX = startPosX
+						local newPosY = startPosY
+
+						if newSizeX < self.MinX then 
+							newSizeX = self.MinX 
+							deltaX = (newSizeX - startSizeX) * signX 
+						end
+						if newSizeY < self.MinY then 
+							newSizeY = self.MinY 
+							deltaY = (newSizeY - startSizeY) * signY 
+						end
+
+						if signX < 0 then newPosX = startPosX + deltaX end
+						if signY < 0 then newPosY = startPosY + deltaY end
+
+						self.SizeX = newSizeX
+						self.SizeY = newSizeY
+
+						guiMain.Position = UDim2.new(0, newPosX, 0, newPosY)
+						guiMain.Size = UDim2.new(0, newSizeX, 0, self.Minimized and 20 or newSizeY)
 					end
 				end)
 			end
@@ -326,21 +356,23 @@ local function sideResizerHook(resizer, dir, side, pos)
 	resizer.InputBegan:Connect(function(input)
 		if not side.Resizing then
 			if input.UserInputType == Enum.UserInputType.MouseMovement then
-				resizer.BackgroundColor3 = theme.MainColor2
+				resizer.BackgroundColor3 = sspdockcontainer.Theme.Button
 			elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
 				local releaseEvent, mouseEvent
-				local offX = Mouse.X - resizer.AbsolutePosition.X
-				local offY = Mouse.Y - resizer.AbsolutePosition.Y
-
 				side.Resizing = resizer
-				resizer.BackgroundColor3 = theme.MainColor2
+				resizer.BackgroundColor3 = sspdockcontainer.Theme.ButtonHover
+
+				local startMouse = Mouse[dir == "V" and "Y" or "X"]
+				local startSizes = {}
+				for i, w in pairs(windows) do startSizes[i] = w.SizeY end
+				local startWidth = side.Width
 
 				releaseEvent = UserInputService.InputEnded:Connect(function(inp)
 					if inp.UserInputType == Enum.UserInputType.MouseButton1 then
 						releaseEvent:Disconnect()
 						mouseEvent:Disconnect()
 						side.Resizing = false
-						resizer.BackgroundColor3 = theme.Button
+						resizer.BackgroundColor3 = sspdockcontainer.Theme.ResizeHandle
 					end
 				end)
 
@@ -353,35 +385,37 @@ local function sideResizerHook(resizer, dir, side, pos)
 					end
 					if inp.UserInputType == Enum.UserInputType.MouseMovement then
 						if dir == "V" then
-							local delta = inp.Position.Y - resizer.AbsolutePosition.Y - offY
+							local delta = inp.Position.Y - startMouse
 							if delta > 0 then
 								local neededSize = delta
 								for i = pos + 1, #windows do
 									local window = windows[i]
-									local newSize = math.max(window.SizeY - neededSize, (window.MinY or 100))
-									neededSize = neededSize - (window.SizeY - newSize)
+									local startS = startSizes[i]
+									local newSize = math.max(startS - neededSize, (window.MinY or 100))
+									neededSize = neededSize - (startS - newSize)
 									window.SizeY = newSize
 								end
-								windows[pos].SizeY = windows[pos].SizeY + math.max(0, delta - neededSize)
+								windows[pos].SizeY = startSizes[pos] + math.max(0, delta - neededSize)
 							else
 								local neededSize = -delta
 								for i = pos, 1, -1 do
 									local window = windows[i]
-									local newSize = math.max(window.SizeY - neededSize, (window.MinY or 100))
-									neededSize = neededSize - (window.SizeY - newSize)
+									local startS = startSizes[i]
+									local newSize = math.max(startS - neededSize, (window.MinY or 100))
+									neededSize = neededSize - (startS - newSize)
 									window.SizeY = newSize
 								end
-								windows[pos + 1].SizeY = windows[pos + 1].SizeY + math.max(0, -delta - neededSize)
+								windows[pos + 1].SizeY = startSizes[pos + 1] + math.max(0, -delta - neededSize)
 							end
 							updateSideFrames()
 							sideResized(side)
 						elseif dir == "H" then
 							local maxWidth = math.max(300, sidesGui.AbsoluteSize.X - static.FreeWidth)
 							local otherSide = (side == leftSide and rightSide or leftSide)
-							local delta = inp.Position.X - resizer.AbsolutePosition.X - offX
+							local delta = inp.Position.X - startMouse
 							delta = (side == leftSide and delta or -delta)
 
-							local proposedSize = math.max(static.MinWidth, side.Width + delta)
+							local proposedSize = math.max(static.MinWidth, startWidth + delta)
 							if proposedSize + otherSide.Width <= maxWidth then
 								side.Width = proposedSize
 							else
@@ -406,7 +440,7 @@ local function sideResizerHook(resizer, dir, side, pos)
 
 	resizer.InputEnded:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseMovement and side.Resizing ~= resizer then
-			resizer.BackgroundColor3 = theme.Button
+			resizer.BackgroundColor3 = sspdockcontainer.Theme.ResizeHandle
 		end
 	end)
 end
@@ -498,29 +532,30 @@ local funcs = {}
 local windowMt = {__index = funcs}
 
 local function createGui(self)
+	local theme = sspdockcontainer.Theme
 	local gui = create({
 		{1, "ScreenGui", {Name="Window"}},
-		{2, "Frame", {Active=true, BackgroundColor3=Color3.new(1,1,1), BackgroundTransparency=1, BorderSizePixel=0, Name="Main", Parent={1}, Position=UDim2.new(0.4, 0, 0.4, 0), Size=UDim2.new(0, 300, 0, 300)}},
-		{3, "Frame", {BackgroundColor3=Color3.new(0.17647059, 0.17647059, 0.17647059), BorderSizePixel=0, Name="Content", Parent={2}, Position=UDim2.new(0, 0, 0, 20), Size=UDim2.new(1, 0, 1, -20), ClipsDescendants=true}},
-		{4, "Frame", {BackgroundColor3=Color3.fromRGB(33, 33, 33), BorderSizePixel=0, Name="Line", Parent={3}, Size=UDim2.new(1, 0, 0, 1)}},
-		{5, "Frame", {BackgroundColor3=Color3.new(0.20392157, 0.20392157, 0.20392157), BorderSizePixel=0, Name="TopBar", Parent={2}, Size=UDim2.new(1, 0, 0, 20)}},
-		{6, "TextLabel", {BackgroundColor3=Color3.new(1,1,1), BackgroundTransparency=1, Font=3, Name="Title", Parent={5}, Position=UDim2.new(0, 5, 0, 0), Size=UDim2.new(1, -10, 0, 20), Text="Window", TextColor3=Color3.new(1,1,1), TextSize=14, TextXAlignment=0}},
-		{7, "TextButton", {AutoButtonColor=false, BackgroundColor3=Color3.new(0.12549020, 0.12549020, 0.12549020), BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="Close", Parent={5}, Position=UDim2.new(1, -18, 0, 2), Size=UDim2.new(0, 16, 0, 16), Text="", TextColor3=Color3.new(1,1,1), TextSize=14}},
-		{8, "ImageLabel", {BackgroundColor3=Color3.new(1,1,1), BackgroundTransparency=1, Image="rbxassetid://5054663650", Parent={7}, Position=UDim2.new(0, 3, 0, 3), Size=UDim2.new(0, 10, 0, 10)}},
+		{2, "Frame", {Active=true, BackgroundTransparency=1, BorderSizePixel=0, Name="Main", Parent={1}, Position=UDim2.new(0.4, 0, 0.4, 0), Size=UDim2.new(0, 300, 0, 300)}},
+		{3, "Frame", {BackgroundColor3=theme.Background, BorderSizePixel=0, Name="Content", Parent={2}, Position=UDim2.new(0, 0, 0, 20), Size=UDim2.new(1, 0, 1, -20), ClipsDescendants=true}},
+		{4, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={3}, Size=UDim2.new(1, 0, 0, 1)}},
+		{5, "Frame", {BackgroundColor3=theme.TopBar, BorderSizePixel=0, Name="TopBar", Parent={2}, Size=UDim2.new(1, 0, 0, 20)}},
+		{6, "TextLabel", {BackgroundTransparency=1, Font=3, Name="Title", Parent={5}, Position=UDim2.new(0, 5, 0, 0), Size=UDim2.new(1, -10, 0, 20), Text="Window", TextColor3=theme.Text, TextSize=14, TextXAlignment=0}},
+		{7, "TextButton", {AutoButtonColor=false, BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="Close", Parent={5}, Position=UDim2.new(1, -18, 0, 2), Size=UDim2.new(0, 16, 0, 16), Text="", TextColor3=theme.Text, TextSize=14}},
+		{8, "ImageLabel", {BackgroundTransparency=1, Image="rbxassetid://5054663650", Parent={7}, Position=UDim2.new(0, 3, 0, 3), Size=UDim2.new(0, 10, 0, 10)}},
 		{9, "UICorner", {CornerRadius=UDim.new(0, 4), Parent={7}}},
-		{10, "TextButton", {AutoButtonColor=false, BackgroundColor3=Color3.new(0.12549020, 0.12549020, 0.12549020), BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="Minimize", Parent={5}, Position=UDim2.new(1, -36, 0, 2), Size=UDim2.new(0, 16, 0, 16), Text="", TextColor3=Color3.new(1,1,1), TextSize=14}},
-		{11, "ImageLabel", {BackgroundColor3=Color3.new(1,1,1), BackgroundTransparency=1, Image="rbxassetid://5034768003", Parent={10}, Position=UDim2.new(0, 3, 0, 3), Size=UDim2.new(0, 10, 0, 10)}},
+		{10, "TextButton", {AutoButtonColor=false, BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="Minimize", Parent={5}, Position=UDim2.new(1, -36, 0, 2), Size=UDim2.new(0, 16, 0, 16), Text="", TextColor3=theme.Text, TextSize=14}},
+		{11, "ImageLabel", {BackgroundTransparency=1, Image="rbxassetid://5034768003", Parent={10}, Position=UDim2.new(0, 3, 0, 3), Size=UDim2.new(0, 10, 0, 10)}},
 		{12, "UICorner", {CornerRadius=UDim.new(0, 4), Parent={10}}},
-		{13, "ImageLabel", {BackgroundColor3=Color3.new(1,1,1), BackgroundTransparency=1, BorderSizePixel=0, Image="rbxassetid://1427967925", Name="Outlines", Parent={2}, Position=UDim2.new(0, -5, 0, -5), ScaleType=1, Size=UDim2.new(1, 10, 1, 10), SliceCenter=Rect.new(6, 6, 25, 25), TileSize=UDim2.new(0, 20, 0, 20)}},
-		{14, "Frame", {BackgroundColor3=Color3.new(1,1,1), BackgroundTransparency=1, Name="ResizeControls", Parent={2}, Position=UDim2.new(0, -5, 0, -5), Size=UDim2.new(1, 10, 1, 10)}},
-		{15, "TextButton", {AutoButtonColor=false, BackgroundColor3=Color3.new(0.2745098, 0.2745098, 0.2745098), BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="North", Parent={14}, Position=UDim2.new(0, 5, 0, 0), Size=UDim2.new(1, -10, 0, 5), Text="", TextColor3=Color3.new(0,0,0), TextSize=14}},
-		{16, "TextButton", {AutoButtonColor=false, BackgroundColor3=Color3.new(0.2745098, 0.2745098, 0.2745098), BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="South", Parent={14}, Position=UDim2.new(0, 5, 1, -5), Size=UDim2.new(1, -10, 0, 5), Text="", TextColor3=Color3.new(0,0,0), TextSize=14}},
-		{17, "TextButton", {AutoButtonColor=false, BackgroundColor3=Color3.new(0.2745098, 0.2745098, 0.2745098), BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="NorthEast", Parent={14}, Position=UDim2.new(1, -5, 0, 0), Size=UDim2.new(0, 5, 0, 5), Text="", TextColor3=Color3.new(0,0,0), TextSize=14}},
-		{18, "TextButton", {AutoButtonColor=false, BackgroundColor3=Color3.new(0.2745098, 0.2745098, 0.2745098), BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="East", Parent={14}, Position=UDim2.new(1, -5, 0, 5), Size=UDim2.new(0, 5, 1, -10), Text="", TextColor3=Color3.new(0,0,0), TextSize=14}},
-		{19, "TextButton", {AutoButtonColor=false, BackgroundColor3=Color3.new(0.2745098, 0.2745098, 0.2745098), BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="West", Parent={14}, Position=UDim2.new(0, 0, 0, 5), Size=UDim2.new(0, 5, 1, -10), Text="", TextColor3=Color3.new(0,0,0), TextSize=14}},
-		{20, "TextButton", {AutoButtonColor=false, BackgroundColor3=Color3.new(0.2745098, 0.2745098, 0.2745098), BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="SouthEast", Parent={14}, Position=UDim2.new(1, -5, 1, -5), Size=UDim2.new(0, 5, 0, 5), Text="", TextColor3=Color3.new(0,0,0), TextSize=14}},
-		{21, "TextButton", {AutoButtonColor=false, BackgroundColor3=Color3.new(0.2745098, 0.2745098, 0.2745098), BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="NorthWest", Parent={14}, Size=UDim2.new(0, 5, 0, 5), Text="", TextColor3=Color3.new(0,0,0), TextSize=14}},
-		{22, "TextButton", {AutoButtonColor=false, BackgroundColor3=Color3.new(0.2745098, 0.2745098, 0.2745098), BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="SouthWest", Parent={14}, Position=UDim2.new(0, 0, 1, -5), Size=UDim2.new(0, 5, 0, 5), Text="", TextColor3=Color3.new(0,0,0), TextSize=14}}
+		{13, "ImageLabel", {BackgroundTransparency=1, BorderSizePixel=0, Image="rbxassetid://1427967925", Name="Outlines", Parent={2}, Position=UDim2.new(0, -5, 0, -5), ScaleType=1, Size=UDim2.new(1, 10, 1, 10), SliceCenter=Rect.new(6, 6, 25, 25), TileSize=UDim2.new(0, 20, 0, 20)}},
+		{14, "Frame", {BackgroundTransparency=1, Name="ResizeControls", Parent={2}, Position=UDim2.new(0, -5, 0, -5), Size=UDim2.new(1, 10, 1, 10)}},
+		{15, "TextButton", {AutoButtonColor=false, BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="North", Parent={14}, Position=UDim2.new(0, 5, 0, 0), Size=UDim2.new(1, -10, 0, 5), Text="", TextSize=14}},
+		{16, "TextButton", {AutoButtonColor=false, BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="South", Parent={14}, Position=UDim2.new(0, 5, 1, -5), Size=UDim2.new(1, -10, 0, 5), Text="", TextSize=14}},
+		{17, "TextButton", {AutoButtonColor=false, BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="NorthEast", Parent={14}, Position=UDim2.new(1, -5, 0, 0), Size=UDim2.new(0, 5, 0, 5), Text="", TextSize=14}},
+		{18, "TextButton", {AutoButtonColor=false, BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="East", Parent={14}, Position=UDim2.new(1, -5, 0, 5), Size=UDim2.new(0, 5, 1, -10), Text="", TextSize=14}},
+		{19, "TextButton", {AutoButtonColor=false, BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="West", Parent={14}, Position=UDim2.new(0, 0, 0, 5), Size=UDim2.new(0, 5, 1, -10), Text="", TextSize=14}},
+		{20, "TextButton", {AutoButtonColor=false, BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="SouthEast", Parent={14}, Position=UDim2.new(1, -5, 1, -5), Size=UDim2.new(0, 5, 0, 5), Text="", TextSize=14}},
+		{21, "TextButton", {AutoButtonColor=false, BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="NorthWest", Parent={14}, Size=UDim2.new(0, 5, 0, 5), Text="", TextSize=14}},
+		{22, "TextButton", {AutoButtonColor=false, BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="SouthWest", Parent={14}, Position=UDim2.new(0, 0, 1, -5), Size=UDim2.new(0, 5, 0, 5), Text="", TextSize=14}}
 	})
 
 	local guiMain = gui.Main
@@ -543,10 +578,9 @@ local function createGui(self)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 and self.Draggable then
 			local releaseEvent, mouseEvent
 			local maxX = sidesGui.AbsoluteSize.X
-			local initX = guiMain.AbsolutePosition.X
-			local initY = guiMain.AbsolutePosition.Y
-			local offX = Mouse.X - initX
-			local offY = Mouse.Y - initY
+			
+			local startMouseX, startMouseY = Mouse.X, Mouse.Y
+			local startPosX, startPosY = guiMain.AbsolutePosition.X, guiMain.AbsolutePosition.Y
 			local alignInsertPos, alignInsertSide
 
 			guiDragging = true
@@ -568,21 +602,25 @@ local function createGui(self)
 				if inp.UserInputType == Enum.UserInputType.MouseMovement and self.Draggable and not self.Closed then
 					if self.Aligned then
 						if leftSide.Resizing or rightSide.Resizing then return end
-						local posX, posY = inp.Position.X - offX, inp.Position.Y - offY
-						local delta = math.sqrt((posX - initX)^2 + (posY - initY)^2)
+						local delta = math.sqrt((inp.Position.X - startMouseX)^2 + (inp.Position.Y - startMouseY)^2)
 						if delta >= 5 then
 							self:SetAligned(false)
+							startMouseX, startMouseY = Mouse.X, Mouse.Y
+							startPosX, startPosY = guiMain.AbsolutePosition.X, guiMain.AbsolutePosition.Y
 						end
 					else
-						local inputX, inputY = inp.Position.X, inp.Position.Y
-						local posX, posY = inputX - offX, inputY - offY
-						if posY < 0 then posY = 0 end
-						guiMain.Position = UDim2.new(0, posX, 0, posY)
+						local deltaX = inp.Position.X - startMouseX
+						local deltaY = inp.Position.Y - startMouseY
+						local newPosX = startPosX + deltaX
+						local newPosY = startPosY + deltaY
+
+						if newPosY < 0 then newPosY = 0 end
+						guiMain.Position = UDim2.new(0, newPosX, 0, newPosY)
 
 						if self.Resizable and self.Alignable then
-							if inputX < 25 then
+							if inp.Position.X < 25 then
 								if sideHasRoom(leftSide, self.MinY or 100) then
-									local insertPos, range = getSideInsertPos(leftSide, inputY)
+									local insertPos, range = getSideInsertPos(leftSide, inp.Position.Y)
 									alignIndicator.Indicator.Position = UDim2.new(0, -15, 0, range[1])
 									alignIndicator.Indicator.Size = UDim2.new(0, 40, 0, range[2] - range[1])
 									alignIndicator.Parent = guiHolder
@@ -590,9 +628,9 @@ local function createGui(self)
 									alignInsertSide = "left"
 									return
 								end
-							elseif inputX >= maxX - 25 then
+							elseif inp.Position.X >= maxX - 25 then
 								if sideHasRoom(rightSide, self.MinY or 100) then
-									local insertPos, range = getSideInsertPos(rightSide, inputY)
+									local insertPos, range = getSideInsertPos(rightSide, inp.Position.Y)
 									alignIndicator.Indicator.Position = UDim2.new(0, maxX - 25, 0, range[1])
 									alignIndicator.Indicator.Size = UDim2.new(0, 40, 0, range[2] - range[1])
 									alignIndicator.Parent = guiHolder
@@ -662,8 +700,8 @@ local function createGui(self)
 		focusInput(self, descs[i])
 	end
 
-	self.MinimizeAnim = buttonAnim(guiTopBar.Minimize)
-	self.CloseAnim = buttonAnim(guiTopBar.Close)
+	self.MinimizeAnim = buttonAnim(guiTopBar.Minimize, {Mode = 2, StartColor = theme.TopBar, HoverColor = theme.ButtonHover, PressColor = theme.ButtonPress, OutlineColor = theme.TopBar})
+	self.CloseAnim = buttonAnim(guiTopBar.Close, {Mode = 2, StartColor = theme.TopBar, HoverColor = Color3.fromRGB(220, 50, 50), PressColor = Color3.fromRGB(180, 40, 40), OutlineColor = theme.TopBar})
 
 	return gui
 end
@@ -958,12 +996,14 @@ function sspdockcontainer.Init()
 	sidesGui = Instance.new("ScreenGui")
 	sidesGui.Name = "sspdockcontainer_Sides"
 	
+	local theme = sspdockcontainer.Theme
+
 	local leftFrame = create({
-		{1, "Frame", {Active=true, Name="LeftSide", BackgroundColor3=Color3.new(0.17647059, 0.17647059, 0.17647059), BorderSizePixel=0}},
-		{2, "TextButton", {AutoButtonColor=false, BackgroundColor3=Color3.new(0.2549019, 0.2549019, 0.2549019), BorderSizePixel=0, Font=3, Name="Resizer", Parent={1}, Size=UDim2.new(0, 5, 1, 0), Text="", TextColor3=Color3.new(0,0,0), TextSize=14}},
-		{3, "Frame", {BackgroundColor3=Color3.new(0.14117647, 0.14117647, 0.14117647), BorderSizePixel=0, Name="Line", Parent={2}, Position=UDim2.new(0, 0, 0, 0), Size=UDim2.new(0, 1, 1, 0)}},
-		{4, "TextButton", {AutoButtonColor=false, BackgroundColor3=Color3.new(0.2549019, 0.2549019, 0.2549019), BorderSizePixel=0, Font=3, Name="WindowResizer", Parent={1}, Position=UDim2.new(1, -300, 0, 0), Size=UDim2.new(1, 0, 0, 4), Text="", TextColor3=Color3.new(0,0,0), TextSize=14}},
-		{5, "Frame", {BackgroundColor3=Color3.new(0.14117647, 0.14117647, 0.14117647), BorderSizePixel=0, Name="Line", Parent={4}, Size=UDim2.new(1, 0, 0, 1)}}
+		{1, "Frame", {Active=true, Name="LeftSide", BackgroundColor3=theme.Background, BorderSizePixel=0}},
+		{2, "TextButton", {AutoButtonColor=false, BackgroundColor3=theme.ResizeHandle, BorderSizePixel=0, Font=3, Name="Resizer", Parent={1}, Size=UDim2.new(0, 5, 1, 0), Text="", TextSize=14}},
+		{3, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={2}, Position=UDim2.new(0, 0, 0, 0), Size=UDim2.new(0, 1, 1, 0)}},
+		{4, "TextButton", {AutoButtonColor=false, BackgroundColor3=theme.ResizeHandle, BorderSizePixel=0, Font=3, Name="WindowResizer", Parent={1}, Position=UDim2.new(1, -300, 0, 0), Size=UDim2.new(1, 0, 0, 4), Text="", TextSize=14}},
+		{5, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={4}, Size=UDim2.new(1, 0, 0, 1)}}
 	})
 	leftSide.Frame = leftFrame
 	leftFrame.Position = UDim2.new(0, -leftSide.Width - 10, 0, 0)
@@ -972,11 +1012,11 @@ function sspdockcontainer.Init()
 	leftFrame.Parent = sidesGui
 
 	local rightFrame = create({
-		{1, "Frame", {Active=true, Name="RightSide", BackgroundColor3=Color3.new(0.17647059, 0.17647059, 0.17647059), BorderSizePixel=0}},
-		{2, "TextButton", {AutoButtonColor=false, BackgroundColor3=Color3.new(0.2549019, 0.2549019, 0.2549019), BorderSizePixel=0, Font=3, Name="Resizer", Parent={1}, Size=UDim2.new(0, 5, 1, 0), Text="", TextColor3=Color3.new(0,0,0), TextSize=14}},
-		{3, "Frame", {BackgroundColor3=Color3.new(0.14117647, 0.14117647, 0.14117647), BorderSizePixel=0, Name="Line", Parent={2}, Position=UDim2.new(0, 4, 0, 0), Size=UDim2.new(0, 1, 1, 0)}},
-		{4, "TextButton", {AutoButtonColor=false, BackgroundColor3=Color3.new(0.2549019, 0.2549019, 0.2549019), BorderSizePixel=0, Font=3, Name="WindowResizer", Parent={1}, Position=UDim2.new(1, -300, 0, 0), Size=UDim2.new(1, 0, 0, 4), Text="", TextColor3=Color3.new(0,0,0), TextSize=14}},
-		{5, "Frame", {BackgroundColor3=Color3.new(0.14117647, 0.14117647, 0.14117647), BorderSizePixel=0, Name="Line", Parent={4}, Size=UDim2.new(1, 0, 0, 1)}}
+		{1, "Frame", {Active=true, Name="RightSide", BackgroundColor3=theme.Background, BorderSizePixel=0}},
+		{2, "TextButton", {AutoButtonColor=false, BackgroundColor3=theme.ResizeHandle, BorderSizePixel=0, Font=3, Name="Resizer", Parent={1}, Size=UDim2.new(0, 5, 1, 0), Text="", TextSize=14}},
+		{3, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={2}, Position=UDim2.new(0, 4, 0, 0), Size=UDim2.new(0, 1, 1, 0)}},
+		{4, "TextButton", {AutoButtonColor=false, BackgroundColor3=theme.ResizeHandle, BorderSizePixel=0, Font=3, Name="WindowResizer", Parent={1}, Position=UDim2.new(1, -300, 0, 0), Size=UDim2.new(1, 0, 0, 4), Text="", TextSize=14}},
+		{5, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={4}, Size=UDim2.new(1, 0, 0, 1)}}
 	})
 	rightSide.Frame = rightFrame
 	rightFrame.Position = UDim2.new(1, 10, 0, 0)
@@ -998,13 +1038,13 @@ function sspdockcontainer.Init()
 	local corner = Instance.new("UICorner", indicator)
 	corner.CornerRadius = UDim.new(0, 10)
 
-	local leftToggle = create({{1, "TextButton", {AutoButtonColor=false, BackgroundColor3=Color3.new(0.20392157, 0.20392157, 0.20392157), BorderColor3=Color3.new(0.14117647, 0.14117647, 0.14117647), BorderMode=2, Font=10, Name="LeftToggle", Position=UDim2.new(0, 0, 0, -36), Size=UDim2.new(0, 16, 0, 36), Text="<", TextColor3=Color3.new(1,1,1), TextSize=14}}})
+	local leftToggle = create({{1, "TextButton", {AutoButtonColor=false, BackgroundColor3=theme.TopBar, BorderColor3=theme.Outline, BorderMode=2, Font=10, Name="LeftToggle", Position=UDim2.new(0, 0, 0, -36), Size=UDim2.new(0, 16, 0, 36), Text="<", TextColor3=theme.Text, TextSize=14}}})
 	local rightToggle = leftToggle:Clone()
 	rightToggle.Name = "RightToggle"
 	rightToggle.Position = UDim2.new(1, -16, 0, -36)
 	
-	buttonAnim(leftToggle, {Mode = 2, PressColor = Color3.fromRGB(32, 32, 32)})
-	buttonAnim(rightToggle, {Mode = 2, PressColor = Color3.fromRGB(32, 32, 32)})
+	buttonAnim(leftToggle, {Mode = 2, StartColor = theme.TopBar, HoverColor = theme.ButtonHover, PressColor = theme.ButtonPress, OutlineColor = theme.TopBar})
+	buttonAnim(rightToggle, {Mode = 2, StartColor = theme.TopBar, HoverColor = theme.ButtonHover, PressColor = theme.ButtonPress, OutlineColor = theme.TopBar})
 
 	leftToggle.MouseButton1Click:Connect(function()
 		sspdockcontainer.ToggleSide("left")
