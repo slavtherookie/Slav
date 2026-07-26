@@ -1,6 +1,9 @@
-local sspdockcontainer = {
-	AllDocks = {}
-}
+local sspdockcontainer = {}
+if getgenv()._sspdockcontainer then
+	pcall(function() getgenv()._sspdockcontainer:Cleanup() end)
+end
+getgenv()._sspdockcontainer = sspdockcontainer
+sspdockcontainer.AllDocks = {}
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -24,8 +27,35 @@ sspdockcontainer.Theme = {
 	ResizeHandle = Color3.fromRGB(65, 65, 65)
 }
 
-local sidesGui, alignIndicator, leftSide, rightSide
+local static = {MinWidth = 200, FreeWidth = 200}
+local visibleWindows = {}
+local leftSide = {Width = 300, Windows = {}, ResizeCons = {}, Hidden = true}
+local rightSide = {Width = 300, Windows = {}, ResizeCons = {}, Hidden = true}
+
+local displayOrderStart = 10
+local sideDisplayOrder = 8
+local sideTweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local tweens = {}
+local isA = game.IsA
+local sidesGui, alignIndicator
 local isInitialized = false
+local updateWindows
+
+function sspdockcontainer:Cleanup()
+	for _, dock in ipairs(self.AllDocks) do
+		if dock.Gui then dock.Gui:Destroy() end
+	end
+	if sidesGui then sidesGui:Destroy() end
+	if alignIndicator then alignIndicator:Destroy() end
+	for _, tween in ipairs(tweens) do
+		tween:Cancel()
+	end
+	table.clear(tweens)
+	table.clear(self.AllDocks)
+	table.clear(visibleWindows)
+	table.clear(leftSide.Windows)
+	table.clear(rightSide.Windows)
+end
 
 function sspdockcontainer.SetTheme(baseColor)
 	local h, s, v = baseColor:ToHSV()
@@ -41,9 +71,10 @@ function sspdockcontainer.SetTheme(baseColor)
 	t.ResizeHandle = shift(0.08)
 	
 	local function updateSideTheme(frame)
+		if not frame then return end
 		frame.BackgroundColor3 = t.Background
 		frame.Resizer.BackgroundColor3 = t.ResizeHandle
-		frame.Line.BackgroundColor3 = t.Outline
+		frame.Resizer.Line.BackgroundColor3 = t.Outline
 		for _, child in ipairs(frame:GetChildren()) do
 			if child.Name == "WindowResizer" then
 				child.BackgroundColor3 = t.ResizeHandle
@@ -70,12 +101,18 @@ function sspdockcontainer.SetTheme(baseColor)
 		dock.GuiElems.Title.TextColor3 = t.Text
 		dock.GuiElems.Close.TextColor3 = t.Text
 		dock.GuiElems.Minimize.TextColor3 = t.Text
+		
+		for _, ctrl in ipairs(dock.GuiElems.ResizeControls:GetChildren()) do
+			if ctrl:IsA("GuiObject") then
+				ctrl.BackgroundColor3 = t.ResizeHandle
+			end
+		end
 	end
 end
 
 local function create(data)
 	local insts = {}
-	for i, v in pairs(data) do insts[v[1]] = Instance.new(v[2]) end
+	for _, v in pairs(data) do insts[v[1]] = Instance.new(v[2]) end
 	for _, v in pairs(data) do
 		for prop, val in pairs(v[3]) do
 			if type(val) == "table" then
@@ -193,25 +230,12 @@ local function buttonAnim(button, data)
 	return control
 end
 
-local static = {MinWidth = 200, FreeWidth = 200}
-local visibleWindows = {}
-leftSide = {Width = 300, Windows = {}, ResizeCons = {}, Hidden = true}
-rightSide = {Width = 300, Windows = {}, ResizeCons = {}, Hidden = true}
-
-local displayOrderStart = 10
-local sideDisplayOrder = 8
-local sideTweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-local tweens = {}
-local isA = game.IsA
-
 local function stopTweens()
 	for i = 1, #tweens do
 		tweens[i]:Cancel()
 	end
 	tweens = {}
 end
-
-local updateWindows
 
 local function moveToTop(window)
 	local found = table.find(visibleWindows, window)
@@ -222,13 +246,30 @@ local function moveToTop(window)
 	end
 end
 
+local function sideHasRoom(side, neededSize)
+	local maxY = sidesGui.AbsoluteSize.Y - (math.max(0, #side.Windows - 1) * 4)
+	local inc = 0
+	for i, v in pairs(side.Windows) do
+		inc = inc + (v.MinY or 100)
+		if inc > maxY - neededSize then return false end
+	end
+	return true
+end
+
 local function getSideInsertPos(side, curY)
-	local totalSlots = #side.Windows + 1
-	local totalHeight = sidesGui.AbsoluteSize.Y
-	local slotHeight = totalHeight / totalSlots
-	
-	local pos = math.clamp(math.floor(curY / slotHeight) + 1, 1, totalSlots)
-	local range = {(pos - 1) * slotHeight, pos * slotHeight}
+	local pos = #side.Windows + 1
+	local range = {0, sidesGui.AbsoluteSize.Y}
+
+	for i, v in ipairs(side.Windows) do
+		local midPos = v.PosY + (v.SizeY / 2)
+		if curY <= midPos then
+			pos = i
+			range[2] = midPos
+			break
+		else
+			range[1] = midPos
+		end
+	end
 	return pos, range
 end
 
@@ -377,11 +418,11 @@ local function sideResizerHook(resizer, dir, side, pos)
 	resizer.InputBegan:Connect(function(input)
 		if not side.Resizing then
 			if input.UserInputType == Enum.UserInputType.MouseMovement then
-				resizer.BackgroundColor3 = sspdockcontainer.Theme.Background
+				resizer.BackgroundColor3 = sspdockcontainer.Theme.Button
 			elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
 				local releaseEvent, mouseEvent
 				side.Resizing = resizer
-				resizer.BackgroundColor3 = sspdockcontainer.Theme.Background
+				resizer.BackgroundColor3 = sspdockcontainer.Theme.ButtonHover
 
 				local startMouse = Mouse[dir == "V" and "Y" or "X"]
 				local startSizes = {}
@@ -555,7 +596,7 @@ local windowMt = {__index = funcs}
 local function createGui(self)
 	local theme = sspdockcontainer.Theme
 	local gui = create({
-		{1, "ScreenGui", {Name="Window"}},
+		{1, "ScreenGui", {Name="Window", IgnoreGuiInset=true}},
 		{2, "Frame", {Active=true, BackgroundTransparency=1, BorderSizePixel=0, Name="Main", Parent={1}, Position=UDim2.new(0.4, 0, 0.4, 0), Size=UDim2.new(0, 300, 0, 300), ClipsDescendants=true}},
 		{3, "Frame", {BackgroundColor3=theme.Background, BorderSizePixel=0, Name="Content", Parent={2}, Position=UDim2.new(0, 0, 0, 20), Size=UDim2.new(1, 0, 1, -20), ClipsDescendants=true}},
 		{4, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={3}, Size=UDim2.new(1, 0, 0, 1)}},
@@ -599,11 +640,16 @@ local function createGui(self)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 and self.Draggable then
 			moveToTop(self)
 			local releaseEvent, mouseEvent
-			local maxX = sidesGui.AbsoluteSize.X
-			
-			local startMouseX, startMouseY = Mouse.X, Mouse.Y
-			local startPosX, startPosY = guiMain.AbsolutePosition.X, guiMain.AbsolutePosition.Y
+			local initX = guiMain.AbsolutePosition.X
+			local initY = guiMain.AbsolutePosition.Y
+			local offX = Mouse.X - initX
+			local offY = Mouse.Y - initY
 			local alignInsertPos, alignInsertSide
+			
+			if not self.Aligned then
+				self.UndockedSizeX = self.SizeX
+				self.UndockedSizeY = self.SizeY
+			end
 
 			guiDragging = true
 
@@ -624,27 +670,22 @@ local function createGui(self)
 				if inp.UserInputType == Enum.UserInputType.MouseMovement and self.Draggable and not self.Closed then
 					if self.Aligned then
 						if leftSide.Resizing or rightSide.Resizing then return end
-						local delta = math.sqrt((inp.Position.X - startMouseX)^2 + (inp.Position.Y - startMouseY)^2)
+						local posX, posY = inp.Position.X - offX, inp.Position.Y - offY
+						local delta = math.sqrt((posX - initX)^2 + (posY - initY)^2)
 						if delta >= 5 then
 							self:SetAligned(false)
-							startMouseX, startMouseY = Mouse.X, Mouse.Y
-							startPosX = Mouse.X - (self.SizeX / 2)
-							startPosY = Mouse.Y - 10
-							guiMain.Position = UDim2.new(0, startPosX, 0, startPosY)
 						end
 					else
-						local deltaX = inp.Position.X - startMouseX
-						local deltaY = inp.Position.Y - startMouseY
-						local newPosX = startPosX + deltaX
-						local newPosY = startPosY + deltaY
-
-						if newPosY < 0 then newPosY = 0 end
-						guiMain.Position = UDim2.new(0, newPosX, 0, newPosY)
+						local inputX, inputY = inp.Position.X, inp.Position.Y
+						local posX, posY = inputX - offX, inputY - offY
+						if posY < 0 then posY = 0 end
+						guiMain.Position = UDim2.new(0, posX, 0, posY)
 
 						if self.Resizable and self.Alignable then
-							if inp.Position.X < 25 then
+							local maxX = sidesGui.AbsoluteSize.X
+							if inputX < 25 then
 								if sideHasRoom(leftSide, self.MinY or 100) then
-									local insertPos, range = getSideInsertPos(leftSide, inp.Position.Y)
+									local insertPos, range = getSideInsertPos(leftSide, inputY)
 									alignIndicator.Indicator.Position = UDim2.new(0, 0, 0, range[1])
 									alignIndicator.Indicator.Size = UDim2.new(0, leftSide.Width, 0, range[2] - range[1])
 									alignIndicator.Parent = guiHolder
@@ -652,9 +693,9 @@ local function createGui(self)
 									alignInsertSide = "left"
 									return
 								end
-							elseif inp.Position.X >= maxX - 25 then
+							elseif inputX >= maxX - 25 then
 								if sideHasRoom(rightSide, self.MinY or 100) then
-									local insertPos, range = getSideInsertPos(rightSide, inp.Position.Y)
+									local insertPos, range = getSideInsertPos(rightSide, inputY)
 									alignIndicator.Indicator.Position = UDim2.new(0, maxX - rightSide.Width, 0, range[1])
 									alignIndicator.Indicator.Size = UDim2.new(0, rightSide.Width, 0, range[2] - range[1])
 									alignIndicator.Parent = guiHolder
@@ -724,8 +765,8 @@ local function createGui(self)
 		focusInput(self, descs[i])
 	end
 
-	self.MinimizeAnim = buttonAnim(guiTopBar.Minimize, {Mode = 1})
-	self.CloseAnim = buttonAnim(guiTopBar.Close, {Mode = 1})
+	self.MinimizeAnim = buttonAnim(guiTopBar.Minimize)
+	self.CloseAnim = buttonAnim(guiTopBar.Close)
 
 	return gui
 end
@@ -841,6 +882,15 @@ function funcs:AlignTo(side, pos, size, silent)
 		self.UndockedSizeY = self.SizeY
 	end
 
+	size = size or self.SizeY
+	if size > 0 and size <= 1 then
+		local totalSideHeight = 0
+		for i, v in pairs(side.Windows) do totalSideHeight = totalSideHeight + v.SizeY end
+		self.SizeY = (totalSideHeight > 0 and totalSideHeight * size * 2) or size
+	else
+		self.SizeY = (size > 0 and size or 100)
+	end
+
 	self:SetAligned(true)
 	self.Side = side
 	self.SizeX = side.Width
@@ -849,12 +899,6 @@ function funcs:AlignTo(side, pos, size, silent)
 	pos = math.min(#side.Windows + 1, pos or 1)
 	self.SidePos = pos
 	table.insert(side.Windows, pos, self)
-
-	local totalWindows = #side.Windows
-	local equalHeight = sidesGui.AbsoluteSize.Y / totalWindows
-	for _, v in ipairs(side.Windows) do
-		v.SizeY = equalHeight
-	end
 
 	if not silent then
 		side.Hidden = false
@@ -890,13 +934,10 @@ function funcs:Close()
 		self:DoTween(self.GuiElems.Title, ti, {TextTransparency = 1})
 		self:DoTween(self.GuiElems.Minimize.ImageLabel, ti, {ImageTransparency = 1})
 		self:DoTween(self.GuiElems.Close.ImageLabel, ti, {ImageTransparency = 1})
+		self:DoTween(self.GuiElems.TopBar, ti, {BackgroundTransparency = 1})
+		self:DoTween(self.GuiElems.Outlines, ti, {ImageTransparency = 1})
 		
 		task.spawn(function()
-			task.wait(0.2)
-			if closeTime ~= self.LastClose then return end
-			self:DoTween(self.GuiElems.TopBar, ti, {BackgroundTransparency = 1})
-			self:DoTween(self.GuiElems.Outlines, ti, {ImageTransparency = 1})
-			
 			task.wait(0.2)
 			if closeTime == self.LastClose then
 				self.Gui.Parent = nil
@@ -1037,6 +1078,7 @@ function sspdockcontainer.Init()
 
 	sidesGui = Instance.new("ScreenGui")
 	sidesGui.Name = "sspdockcontainer_Sides"
+	sidesGui.IgnoreGuiInset = true
 	
 	local theme = sspdockcontainer.Theme
 
@@ -1072,8 +1114,10 @@ function sspdockcontainer.Init()
 	alignIndicator = Instance.new("ScreenGui")
 	alignIndicator.Name = "sspdockcontainer_Indicator"
 	alignIndicator.DisplayOrder = 101000
+	alignIndicator.IgnoreGuiInset = true
+	
 	local indicator = Instance.new("Frame", alignIndicator)
-	indicator.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
+	indicator.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 	indicator.BorderSizePixel = 0
 	indicator.BackgroundTransparency = 0.5
 	indicator.Name = "Indicator"
@@ -1141,6 +1185,7 @@ function sspdockcontainer.new(title, sizeX, sizeY)
 		OnMinimize = Signal.new(),
 		OnRestore = Signal.new()
 	}, windowMt)
+	
 	obj.Gui = createGui(obj)
 	table.insert(sspdockcontainer.AllDocks, obj)
 	if title then obj:SetTitle(title) end
