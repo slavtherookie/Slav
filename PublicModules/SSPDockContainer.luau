@@ -85,6 +85,14 @@ function sspdockcontainer.SetTheme(baseColor)
 		end
 	end
 
+	local function updateTemplate(template)
+		if not template then return end
+		template.BackgroundColor3 = t.ResizeHandle
+		if template:FindFirstChild("Line") then
+			template.Line.BackgroundColor3 = t.Outline
+		end
+	end
+
 	if sidesGui then
 		updateSideTheme(leftSide.Frame)
 		updateSideTheme(rightSide.Frame)
@@ -92,6 +100,9 @@ function sspdockcontainer.SetTheme(baseColor)
 		sidesGui.LeftToggle.BorderColor3 = t.Outline
 		sidesGui.RightToggle.BackgroundColor3 = t.TopBar
 		sidesGui.RightToggle.BorderColor3 = t.Outline
+		
+		updateTemplate(leftSide.WindowResizer)
+		updateTemplate(rightSide.WindowResizer)
 	end
 
 	for _, dock in ipairs(sspdockcontainer.AllDocks) do
@@ -166,30 +177,21 @@ local function buttonAnim(button, data)
 	local mode = data and data.Mode or 1
 	local control = {}
 
-	if mode == 2 then
-		local lerpTo = data.LerpTo or Color3.new(0, 0, 0)
-		local delta = data.LerpDelta or 0.2
-		control.StartColor = data.StartColor or button.BackgroundColor3
-		control.PressColor = data.PressColor or control.StartColor:lerp(lerpTo, delta)
-		control.HoverColor = data.HoverColor or control.StartColor:lerp(control.PressColor, 0.6)
-		control.OutlineColor = data.OutlineColor
-	end
-
 	button.InputBegan:Connect(function(input)
 		if disabled then return end
 		if input.UserInputType == Enum.UserInputType.MouseMovement and not holding then
 			if mode == 1 then
-				button.BackgroundTransparency = 0.4
+				button.BackgroundTransparency = 0.5
 			elseif mode == 2 then
-				button.BackgroundColor3 = control.HoverColor
+				button.BackgroundColor3 = sspdockcontainer.Theme.ButtonHover
 			end
 		elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
 			holding = true
 			if mode == 1 then
 				button.BackgroundTransparency = 0
 			elseif mode == 2 then
-				button.BackgroundColor3 = control.PressColor
-				if control.OutlineColor then button.BorderColor3 = control.PressColor end
+				button.BackgroundColor3 = sspdockcontainer.Theme.ButtonPress
+				button.BorderColor3 = sspdockcontainer.Theme.ButtonPress
 			end
 		end
 	end)
@@ -200,15 +202,15 @@ local function buttonAnim(button, data)
 			if mode == 1 then
 				button.BackgroundTransparency = 1
 			elseif mode == 2 then
-				button.BackgroundColor3 = control.StartColor
+				button.BackgroundColor3 = sspdockcontainer.Theme.TopBar
 			end
 		elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
 			holding = false
 			if mode == 1 then
-				button.BackgroundTransparency = checkMouseInGui(button) and 0.4 or 1
+				button.BackgroundTransparency = checkMouseInGui(button) and 0.5 or 1
 			elseif mode == 2 then
-				button.BackgroundColor3 = checkMouseInGui(button) and control.HoverColor or control.StartColor
-				if control.OutlineColor then button.BorderColor3 = control.OutlineColor end
+				button.BackgroundColor3 = checkMouseInGui(button) and sspdockcontainer.Theme.ButtonHover or sspdockcontainer.Theme.TopBar
+				button.BorderColor3 = sspdockcontainer.Theme.Outline
 			end
 		end
 	end)
@@ -219,7 +221,7 @@ local function buttonAnim(button, data)
 		if mode == 1 then
 			button.BackgroundTransparency = 1
 		elseif mode == 2 then
-			button.BackgroundColor3 = control.StartColor
+			button.BackgroundColor3 = sspdockcontainer.Theme.TopBar
 		end
 	end
 
@@ -418,11 +420,11 @@ local function sideResizerHook(resizer, dir, side, pos)
 	resizer.InputBegan:Connect(function(input)
 		if not side.Resizing then
 			if input.UserInputType == Enum.UserInputType.MouseMovement then
-				resizer.BackgroundColor3 = sspdockcontainer.Theme.Background
+				resizer.BackgroundColor3 = sspdockcontainer.Theme.ButtonHover
 			elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
 				local releaseEvent, mouseEvent
 				side.Resizing = resizer
-				resizer.BackgroundColor3 = sspdockcontainer.Theme.ButtonHover
+				resizer.BackgroundColor3 = sspdockcontainer.Theme.ButtonPress
 
 				local startMouse = Mouse[dir == "V" and "Y" or "X"]
 				local startSizes = {}
@@ -535,7 +537,7 @@ local function renderSide(side, noTween)
 		if not isEnd then
 			local newTemplate = template:Clone()
 			newTemplate.Position = UDim2.new(0, 0, 0, currentPos - 4)
-			newTemplate.Size = UDim2.new(0, side.Width, 0, 4)
+			newTemplate.Size = UDim2.new(1, 0, 0, 4)
 			side.ResizeCons[#side.ResizeCons + 1] = v.Gui.Main:GetPropertyChangedSignal("Size"):Connect(function()
 				newTemplate.Position = UDim2.new(0, 0, 0, v.GuiElems.Main.Position.Y.Offset + v.GuiElems.Main.Size.Y.Offset)
 			end)
@@ -597,7 +599,7 @@ local windowMt = {__index = funcs}
 local function createGui(self)
 	local theme = sspdockcontainer.Theme
 	local gui = create({
-		{1, "ScreenGui", {Name="Window"}},
+		{1, "ScreenGui", {Name="Window", IgnoreGuiInset=true}},
 		{2, "Frame", {Active=true, BackgroundTransparency=1, BorderSizePixel=0, Name="Main", Parent={1}, Position=UDim2.new(0.4, 0, 0.4, 0), Size=UDim2.new(0, 300, 0, 300), ClipsDescendants=true}},
 		{3, "Frame", {BackgroundColor3=theme.Background, BorderSizePixel=0, Name="Content", Parent={2}, Position=UDim2.new(0, 0, 0, 20), Size=UDim2.new(1, 0, 1, -20), ClipsDescendants=true}},
 		{4, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={3}, Size=UDim2.new(1, 0, 0, 1)}},
@@ -883,15 +885,6 @@ function funcs:AlignTo(side, pos, size, silent)
 		self.UndockedSizeY = self.SizeY
 	end
 
-	size = size or self.SizeY
-	if size > 0 and size <= 1 then
-		local totalSideHeight = 0
-		for i, v in pairs(side.Windows) do totalSideHeight = totalSideHeight + v.SizeY end
-		self.SizeY = (totalSideHeight > 0 and totalSideHeight * size * 2) or size
-	else
-		self.SizeY = (size > 0 and size or 100)
-	end
-
 	self:SetAligned(true)
 	self.Side = side
 	self.SizeX = side.Width
@@ -900,6 +893,12 @@ function funcs:AlignTo(side, pos, size, silent)
 	pos = math.min(#side.Windows + 1, pos or 1)
 	self.SidePos = pos
 	table.insert(side.Windows, pos, self)
+
+	local totalWindows = #side.Windows
+	local equalHeight = math.max(100, sidesGui.AbsoluteSize.Y / totalWindows)
+	for _, v in ipairs(side.Windows) do
+		v.SizeY = equalHeight
+	end
 
 	if not silent then
 		side.Hidden = false
@@ -1079,6 +1078,7 @@ function sspdockcontainer.Init()
 
 	sidesGui = Instance.new("ScreenGui")
 	sidesGui.Name = "sspdockcontainer_Sides"
+	sidesGui.IgnoreGuiInset = true
 	
 	local theme = sspdockcontainer.Theme
 
@@ -1114,9 +1114,10 @@ function sspdockcontainer.Init()
 	alignIndicator = Instance.new("ScreenGui")
 	alignIndicator.Name = "sspdockcontainer_Indicator"
 	alignIndicator.DisplayOrder = 101000
+	alignIndicator.IgnoreGuiInset = true
 	
 	local indicator = Instance.new("Frame", alignIndicator)
-	indicator.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
+	indicator.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 	indicator.BorderSizePixel = 0
 	indicator.BackgroundTransparency = 0.5
 	indicator.Name = "Indicator"
