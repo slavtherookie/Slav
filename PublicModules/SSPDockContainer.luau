@@ -418,7 +418,7 @@ local function sideResizerHook(resizer, dir, side, pos)
 	resizer.InputBegan:Connect(function(input)
 		if not side.Resizing then
 			if input.UserInputType == Enum.UserInputType.MouseMovement then
-				resizer.BackgroundColor3 = sspdockcontainer.Theme.Button
+				resizer.BackgroundColor3 = sspdockcontainer.Theme.Background
 			elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
 				local releaseEvent, mouseEvent
 				side.Resizing = resizer
@@ -535,6 +535,7 @@ local function renderSide(side, noTween)
 		if not isEnd then
 			local newTemplate = template:Clone()
 			newTemplate.Position = UDim2.new(0, 0, 0, currentPos - 4)
+			newTemplate.Size = UDim2.new(0, side.Width, 0, 4)
 			side.ResizeCons[#side.ResizeCons + 1] = v.Gui.Main:GetPropertyChangedSignal("Size"):Connect(function()
 				newTemplate.Position = UDim2.new(0, 0, 0, v.GuiElems.Main.Position.Y.Offset + v.GuiElems.Main.Size.Y.Offset)
 			end)
@@ -602,10 +603,10 @@ local function createGui(self)
 		{4, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={3}, Size=UDim2.new(1, 0, 0, 1)}},
 		{5, "Frame", {BackgroundColor3=theme.TopBar, BorderSizePixel=0, Name="TopBar", Parent={2}, Size=UDim2.new(1, 0, 0, 20)}},
 		{6, "TextLabel", {BackgroundTransparency=1, Font=3, Name="Title", Parent={5}, Position=UDim2.new(0, 5, 0, 0), Size=UDim2.new(1, -10, 0, 20), Text="Window", TextColor3=theme.Text, TextSize=14, TextXAlignment=0}},
-		{7, "TextButton", {AutoButtonColor=false, BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="Close", Parent={5}, Position=UDim2.new(1, -18, 0, 2), Size=UDim2.new(0, 16, 0, 16), Text="", TextColor3=theme.Text, TextSize=14}},
+		{7, "TextButton", {AutoButtonColor=false, BackgroundColor3=Color3.fromRGB(0,0,0), BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="Close", Parent={5}, Position=UDim2.new(1, -18, 0, 2), Size=UDim2.new(0, 16, 0, 16), Text="", TextColor3=theme.Text, TextSize=14}},
 		{8, "ImageLabel", {BackgroundTransparency=1, Image="rbxassetid://5054663650", Parent={7}, Position=UDim2.new(0, 3, 0, 3), Size=UDim2.new(0, 10, 0, 10)}},
 		{9, "UICorner", {CornerRadius=UDim.new(0, 4), Parent={7}}},
-		{10, "TextButton", {AutoButtonColor=false, BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="Minimize", Parent={5}, Position=UDim2.new(1, -36, 0, 2), Size=UDim2.new(0, 16, 0, 16), Text="", TextColor3=theme.Text, TextSize=14}},
+		{10, "TextButton", {AutoButtonColor=false, BackgroundColor3=Color3.fromRGB(0,0,0), BackgroundTransparency=1, BorderSizePixel=0, Font=3, Name="Minimize", Parent={5}, Position=UDim2.new(1, -36, 0, 2), Size=UDim2.new(0, 16, 0, 16), Text="", TextColor3=theme.Text, TextSize=14}},
 		{11, "ImageLabel", {BackgroundTransparency=1, Image="rbxassetid://5034768003", Parent={10}, Position=UDim2.new(0, 3, 0, 3), Size=UDim2.new(0, 10, 0, 10)}},
 		{12, "UICorner", {CornerRadius=UDim.new(0, 4), Parent={10}}},
 		{13, "ImageLabel", {BackgroundTransparency=1, BorderSizePixel=0, Image="rbxassetid://1427967925", Name="Outlines", Parent={2}, Position=UDim2.new(0, -5, 0, -5), ScaleType=1, Size=UDim2.new(1, 10, 1, 10), SliceCenter=Rect.new(6, 6, 25, 25), TileSize=UDim2.new(0, 20, 0, 20)}},
