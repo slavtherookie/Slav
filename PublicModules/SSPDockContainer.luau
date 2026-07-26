@@ -198,11 +198,9 @@ end
 local function getSideInsertPos(side, curY)
 	local pos = #side.Windows + 1
 	local range = {0, sidesGui.AbsoluteSize.Y}
-	local currentY = 0
 
 	for i, v in ipairs(side.Windows) do
-		local nextY = currentY + v.SizeY
-		local midPos = currentY + (v.SizeY / 2)
+		local midPos = v.PosY + (v.SizeY / 2)
 		if curY <= midPos then
 			pos = i
 			range[2] = midPos
@@ -210,7 +208,6 @@ local function getSideInsertPos(side, curY)
 		else
 			range[1] = midPos
 		end
-		currentY = nextY + 4
 	end
 	return pos, range
 end
@@ -583,10 +580,16 @@ local function createGui(self)
 			moveToTop(self)
 			local releaseEvent, mouseEvent
 			local maxX = sidesGui.AbsoluteSize.X
-			
-			local startMouseX, startMouseY = Mouse.X, Mouse.Y
-			local startPosX, startPosY = guiMain.AbsolutePosition.X, guiMain.AbsolutePosition.Y
+			local initX = guiMain.AbsolutePosition.X
+			local initY = guiMain.AbsolutePosition.Y
+			local offX = Mouse.X - initX
+			local offY = Mouse.Y - initY
 			local alignInsertPos, alignInsertSide
+			
+			if not self.Aligned then
+				self.UndockedSizeX = self.SizeX
+				self.UndockedSizeY = self.SizeY
+			end
 
 			guiDragging = true
 
@@ -607,37 +610,33 @@ local function createGui(self)
 				if inp.UserInputType == Enum.UserInputType.MouseMovement and self.Draggable and not self.Closed then
 					if self.Aligned then
 						if leftSide.Resizing or rightSide.Resizing then return end
-						local delta = math.sqrt((inp.Position.X - startMouseX)^2 + (inp.Position.Y - startMouseY)^2)
+						local posX, posY = inp.Position.X - offX, inp.Position.Y - offY
+						local delta = math.sqrt((posX - initX)^2 + (posY - initY)^2)
 						if delta >= 5 then
 							self:SetAligned(false)
-							startMouseX, startMouseY = Mouse.X, Mouse.Y
-							startPosX, startPosY = guiMain.AbsolutePosition.X, guiMain.AbsolutePosition.Y
 						end
 					else
-						local deltaX = inp.Position.X - startMouseX
-						local deltaY = inp.Position.Y - startMouseY
-						local newPosX = startPosX + deltaX
-						local newPosY = startPosY + deltaY
-
-						if newPosY < 0 then newPosY = 0 end
-						guiMain.Position = UDim2.new(0, newPosX, 0, newPosY)
+						local inputX, inputY = inp.Position.X, inp.Position.Y
+						local posX, posY = inputX - offX, inputY - offY
+						if posY < 0 then posY = 0 end
+						guiMain.Position = UDim2.new(0, posX, 0, posY)
 
 						if self.Resizable and self.Alignable then
-							if inp.Position.X < 25 then
+							if inputX < 25 then
 								if sideHasRoom(leftSide, self.MinY or 100) then
-									local insertPos, range = getSideInsertPos(leftSide, inp.Position.Y)
-									alignIndicator.Indicator.Position = UDim2.new(0, 0, 0, range[1])
-									alignIndicator.Indicator.Size = UDim2.new(0, leftSide.Width, 0, range[2] - range[1])
+									local insertPos, range = getSideInsertPos(leftSide, inputY)
+									alignIndicator.Indicator.Position = UDim2.new(0, -15, 0, range[1])
+									alignIndicator.Indicator.Size = UDim2.new(0, 40, 0, range[2] - range[1])
 									alignIndicator.Parent = guiHolder
 									alignInsertPos = insertPos
 									alignInsertSide = "left"
 									return
 								end
-							elseif inp.Position.X >= maxX - 25 then
+							elseif inputX >= maxX - 25 then
 								if sideHasRoom(rightSide, self.MinY or 100) then
-									local insertPos, range = getSideInsertPos(rightSide, inp.Position.Y)
-									alignIndicator.Indicator.Position = UDim2.new(0, maxX - rightSide.Width, 0, range[1])
-									alignIndicator.Indicator.Size = UDim2.new(0, rightSide.Width, 0, range[2] - range[1])
+									local insertPos, range = getSideInsertPos(rightSide, inputY)
+									alignIndicator.Indicator.Position = UDim2.new(0, maxX - 25, 0, range[1])
+									alignIndicator.Indicator.Size = UDim2.new(0, 40, 0, range[2] - range[1])
 									alignIndicator.Parent = guiHolder
 									alignInsertPos = insertPos
 									alignInsertSide = "right"
@@ -705,8 +704,8 @@ local function createGui(self)
 		focusInput(self, descs[i])
 	end
 
-	self.MinimizeAnim = buttonAnim(guiTopBar.Minimize, {Mode = 2, StartColor = theme.TopBar, HoverColor = theme.ButtonHover, PressColor = theme.ButtonPress, OutlineColor = theme.TopBar})
-	self.CloseAnim = buttonAnim(guiTopBar.Close, {Mode = 2, StartColor = theme.TopBar, HoverColor = Color3.fromRGB(220, 50, 50), PressColor = Color3.fromRGB(180, 40, 40), OutlineColor = theme.TopBar})
+	self.MinimizeAnim = buttonAnim(guiTopBar.Minimize)
+	self.CloseAnim = buttonAnim(guiTopBar.Close)
 
 	return gui
 end
@@ -866,14 +865,19 @@ function funcs:Close()
 
 	if not self.Aligned then
 		self:StopTweens()
-		local ti = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+		local ti = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 		local closeTime = tick()
 		self.LastClose = closeTime
 
-		self:DoTween(self.GuiElems.Main, ti, {Size = UDim2.new(0, self.SizeX, 0, 0)})
+		self:DoTween(self.GuiElems.Main, ti, {Size = UDim2.new(0, self.SizeX, 0, 20)})
+		self:DoTween(self.GuiElems.Title, ti, {TextTransparency = 1})
+		self:DoTween(self.GuiElems.Minimize.ImageLabel, ti, {ImageTransparency = 1})
+		self:DoTween(self.GuiElems.Close.ImageLabel, ti, {ImageTransparency = 1})
+		self:DoTween(self.GuiElems.TopBar, ti, {BackgroundTransparency = 1})
+		self:DoTween(self.GuiElems.Outlines, ti, {ImageTransparency = 1})
 		
 		task.spawn(function()
-			task.wait(0.25)
+			task.wait(0.2)
 			if closeTime == self.LastClose then
 				self.Gui.Parent = nil
 				updateWindows(true)
@@ -960,8 +964,8 @@ function funcs:Show(data)
 		else
 			if table.find(visibleWindows, self) then return end
 
-			self.GuiElems.Main.Size = UDim2.new(0, self.SizeX, 0, 0)
-			local ti = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+			self.GuiElems.Main.Size = UDim2.new(0, self.SizeX, 0, 20)
+			local ti = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 			self:StopTweens()
 			self:DoTween(self.GuiElems.Main, ti, {Size = UDim2.new(0, self.SizeX, 0, self.SizeY)})
 
