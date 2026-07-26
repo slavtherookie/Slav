@@ -534,12 +534,12 @@ local function renderSide(side, noTween)
 
 		if not isEnd then
 			local newTemplate = template:Clone()
-			newTemplate.Position = UDim2.new(1, -side.Width, 0, currentPos - 4)
+			newTemplate.Position = UDim2.new(0, 0, 0, currentPos - 4)
 			side.ResizeCons[#side.ResizeCons + 1] = v.Gui.Main:GetPropertyChangedSignal("Size"):Connect(function()
-				newTemplate.Position = UDim2.new(1, -side.Width, 0, v.GuiElems.Main.Position.Y.Offset + v.GuiElems.Main.Size.Y.Offset)
+				newTemplate.Position = UDim2.new(0, 0, 0, v.GuiElems.Main.Position.Y.Offset + v.GuiElems.Main.Size.Y.Offset)
 			end)
 			side.ResizeCons[#side.ResizeCons + 1] = v.Gui.Main:GetPropertyChangedSignal("Position"):Connect(function()
-				newTemplate.Position = UDim2.new(1, -side.Width, 0, v.GuiElems.Main.Position.Y.Offset + v.GuiElems.Main.Size.Y.Offset)
+				newTemplate.Position = UDim2.new(0, 0, 0, v.GuiElems.Main.Position.Y.Offset + v.GuiElems.Main.Size.Y.Offset)
 			end)
 			sideResizerHook(newTemplate, "V", side, i)
 			newTemplate.Parent = side.Frame
@@ -596,7 +596,7 @@ local windowMt = {__index = funcs}
 local function createGui(self)
 	local theme = sspdockcontainer.Theme
 	local gui = create({
-		{1, "ScreenGui", {Name="Window", IgnoreGuiInset=true}},
+		{1, "ScreenGui", {Name="Window"}},
 		{2, "Frame", {Active=true, BackgroundTransparency=1, BorderSizePixel=0, Name="Main", Parent={1}, Position=UDim2.new(0.4, 0, 0.4, 0), Size=UDim2.new(0, 300, 0, 300), ClipsDescendants=true}},
 		{3, "Frame", {BackgroundColor3=theme.Background, BorderSizePixel=0, Name="Content", Parent={2}, Position=UDim2.new(0, 0, 0, 20), Size=UDim2.new(1, 0, 1, -20), ClipsDescendants=true}},
 		{4, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={3}, Size=UDim2.new(1, 0, 0, 1)}},
@@ -1078,7 +1078,6 @@ function sspdockcontainer.Init()
 
 	sidesGui = Instance.new("ScreenGui")
 	sidesGui.Name = "sspdockcontainer_Sides"
-	sidesGui.IgnoreGuiInset = true
 	
 	local theme = sspdockcontainer.Theme
 
@@ -1086,7 +1085,7 @@ function sspdockcontainer.Init()
 		{1, "Frame", {Active=true, Name="LeftSide", BackgroundColor3=theme.Background, BorderSizePixel=0}},
 		{2, "TextButton", {AutoButtonColor=false, BackgroundColor3=theme.ResizeHandle, BorderSizePixel=0, Font=3, Name="Resizer", Parent={1}, Size=UDim2.new(0, 5, 1, 0), Text="", TextSize=14}},
 		{3, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={2}, Position=UDim2.new(0, 0, 0, 0), Size=UDim2.new(0, 1, 1, 0)}},
-		{4, "TextButton", {AutoButtonColor=false, BackgroundColor3=theme.ResizeHandle, BorderSizePixel=0, Font=3, Name="WindowResizer", Parent={1}, Position=UDim2.new(1, -300, 0, 0), Size=UDim2.new(1, 0, 0, 4), Text="", TextSize=14}},
+		{4, "TextButton", {AutoButtonColor=false, BackgroundColor3=theme.ResizeHandle, BorderSizePixel=0, Font=3, Name="WindowResizer", Parent={1}, Position=UDim2.new(0, 0, 0, 0), Size=UDim2.new(1, 0, 0, 4), Text="", TextSize=14}},
 		{5, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={4}, Size=UDim2.new(1, 0, 0, 1)}}
 	})
 	leftSide.Frame = leftFrame
@@ -1099,7 +1098,7 @@ function sspdockcontainer.Init()
 		{1, "Frame", {Active=true, Name="RightSide", BackgroundColor3=theme.Background, BorderSizePixel=0}},
 		{2, "TextButton", {AutoButtonColor=false, BackgroundColor3=theme.ResizeHandle, BorderSizePixel=0, Font=3, Name="Resizer", Parent={1}, Size=UDim2.new(0, 5, 1, 0), Text="", TextSize=14}},
 		{3, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={2}, Position=UDim2.new(0, 4, 0, 0), Size=UDim2.new(0, 1, 1, 0)}},
-		{4, "TextButton", {AutoButtonColor=false, BackgroundColor3=theme.ResizeHandle, BorderSizePixel=0, Font=3, Name="WindowResizer", Parent={1}, Position=UDim2.new(1, -300, 0, 0), Size=UDim2.new(1, 0, 0, 4), Text="", TextSize=14}},
+		{4, "TextButton", {AutoButtonColor=false, BackgroundColor3=theme.ResizeHandle, BorderSizePixel=0, Font=3, Name="WindowResizer", Parent={1}, Position=UDim2.new(0, 0, 0, 0), Size=UDim2.new(1, 0, 0, 4), Text="", TextSize=14}},
 		{5, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={4}, Size=UDim2.new(1, 0, 0, 1)}}
 	})
 	rightSide.Frame = rightFrame
@@ -1114,10 +1113,9 @@ function sspdockcontainer.Init()
 	alignIndicator = Instance.new("ScreenGui")
 	alignIndicator.Name = "sspdockcontainer_Indicator"
 	alignIndicator.DisplayOrder = 101000
-	alignIndicator.IgnoreGuiInset = true
 	
 	local indicator = Instance.new("Frame", alignIndicator)
-	indicator.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+	indicator.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
 	indicator.BorderSizePixel = 0
 	indicator.BackgroundTransparency = 0.5
 	indicator.Name = "Indicator"
