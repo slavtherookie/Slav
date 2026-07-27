@@ -57,7 +57,7 @@ function ScriptViewer.Init()
 	editor.ScrollBarTrackTransparency = 1
 	editor.ScrollBarStrokeTransparency = 1
     
-	-- [ NEW ]: Subtle black stroke on the text
+    editor.Font = Enum.Font.Code
 	editor.StrokeThickness = 2
 	editor.StrokeColor3 = Color3.fromRGB(0, 0, 0)
 	editor.StrokeTransparency = 0.75 -- 0.75 makes it 75% transparent (not very visible)
