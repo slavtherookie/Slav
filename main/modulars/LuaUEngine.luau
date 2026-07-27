@@ -891,7 +891,7 @@ function Baseline.new(canvasGroup)
             local relativeX = (pos.X - self.InnerFrame.AbsolutePosition.X) - 4
             local relativeY = (pos.Y - self.InnerFrame.AbsolutePosition.Y) - 4
             self.CursorIndex = self:GetClosestCursorIndex(relativeX, relativeY)
-            self:UpdateBlinker(true)
+            self:UpdateBlinker(false)
         end
     end))
     
@@ -1907,6 +1907,7 @@ function Baseline:PasteChunked(text)
     if self.CanvasGroup:GetAttribute("ReadOnly") then return end
     if self.IsPasting then return end
     self.IsPasting = true
+    text = text:gsub("\r", "")
     local maxLength = self.CanvasGroup:GetAttribute("MaxLength")
     if maxLength and maxLength > 0 then
         local currentLength = utf8.len(self.CanvasGroup:GetAttribute("Text") or "") or 0
@@ -2014,7 +2015,7 @@ function Baseline:RenderAutocomplete()
             self.AutocompleteIndex = i
             self:CommitAutocomplete()
         end)
-        yOffset = yOffset + 22
+        yOffset = yOffset + 24
     end
     self.AutocompleteScroll.CanvasSize = UDim2.new(0, 0, 0, yOffset)
     local scrollPos = self.AutocompleteScroll.CanvasPosition.Y
@@ -2931,7 +2932,7 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
                                 if ln then
                                     self.FoldedLines[ln] = not self.FoldedLines[ln]
                                     self.CachedText = nil
-                                    self:UpdateBlinker(true)
+                                    self:UpdateBlinker(false)
                                 end
                             end)
                             self.FoldButtonsPool[visibleFoldButtonsCount] = foldBtn
