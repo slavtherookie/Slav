@@ -15,7 +15,7 @@ function ScriptViewer.Init()
 	local actionBar = Instance.new("Frame")
 	actionBar.Name = "ActionBar"
 	actionBar.Size = UDim2.new(1, 0, 0, 24)
-	actionBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+	actionBar.BackgroundColor3 = Color3.fromRGB(52, 52, 52)
 	actionBar.BorderSizePixel = 0
 	actionBar.Parent = contentPane
 
