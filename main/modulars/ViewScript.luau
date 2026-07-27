@@ -43,7 +43,7 @@ function ScriptViewer.Init()
 
 	local btnCopy = createButton("CopyBtn", "Copy to Clipboard", 1)
 	local btnSave = createButton("SaveBtn", "Save to File", 2)
-	local btnExec = createButton("ExecuteBtn", "Execute Code", 3)
+	local btnExec = createButton("ExecuteBtn", "Execute", 3)
 	local btnClear = createButton("ClearBtn", "Clear", 4)
 
 	local editorContainer = Instance.new("Frame")
@@ -60,7 +60,7 @@ function ScriptViewer.Init()
     editor.Font = Enum.Font.Code
 	editor.StrokeThickness = 1.35
 	editor.StrokeColor3 = Color3.fromRGB(0, 0, 0)
-	editor.StrokeTransparency = 0.75 -- 0.75 makes it 75% transparent (not very visible)
+	editor.StrokeTransparency = 0.75
     
 	editor:ImportTheme("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/Public/Themes/PaperDark.luau")
 
