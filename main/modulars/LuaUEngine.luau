@@ -32,7 +32,7 @@ local GlobalSettings = {
     Minimap = true,               
     Text = "",                    
     TextSize = 14,                
-    Font = Enum.Font.RobotoMono,  
+    Font = Enum.Font.Code,  
     TextColor3 = Color3.new(1, 1, 1), 
     BlinkerColor = Color3.new(1, 1, 1), 
     HighlightColor = Color3.fromRGB(19, 35, 93), 
@@ -699,7 +699,7 @@ function Baseline.new(canvasGroup)
     self.AutocompleteHintText.Position = UDim2.new(0, 5, 0, 0)
     self.AutocompleteHintText.BackgroundTransparency = 1
     self.AutocompleteHintText.TextColor3 = Color3.fromRGB(220, 220, 220)
-    self.AutocompleteHintText.Font = Enum.Font.RobotoMono
+    self.AutocompleteHintText.Font = Enum.Font.Code
     self.AutocompleteHintText.TextSize = 14
     self.AutocompleteHintText.TextXAlignment = Enum.TextXAlignment.Left
     self.AutocompleteHintText.Parent = self.AutocompleteHint
@@ -2465,7 +2465,7 @@ function Baseline:GetLimit()
     local isWrapped = self.CanvasGroup:GetAttribute("Wrapped") or false
     local numberMarginWidth = 0
     if self.CanvasGroup:GetAttribute("Lines") then
-        local font = self.CanvasGroup:GetAttribute("Font") or Enum.Font.RobotoMono
+        local font = self.CanvasGroup:GetAttribute("Font") or Enum.Font.Code
         local textSize = self.CanvasGroup:GetAttribute("TextSize") or 16
         local lineCountEstimate = self.CachedLineMap and #self.CachedLineMap or 1000
         local charWidth = Utils.getTextSize("A", textSize, font, Vector2.new(10000, 10000)).X
@@ -2647,7 +2647,7 @@ end
 function Baseline:GetClosestCursorIndex(clickX, clickY)
     local displayedText = self:GetDisplayText()
     if displayedText == "" then return 0 end
-    local font = self.CanvasGroup:GetAttribute("Font") or Enum.Font.RobotoMono
+    local font = self.CanvasGroup:GetAttribute("Font") or Enum.Font.Code
     local textSize = self.CanvasGroup:GetAttribute("TextSize") or 16
     local lineMapData = self:GetLineMapCached(displayedText, textSize, font, self:GetLimit())
     if #lineMapData == 0 then return 0 end
@@ -2668,7 +2668,7 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
     if autoScrollEnabled == nil then autoScrollEnabled = true end
     local rawEditorText = self.CanvasGroup:GetAttribute("Text") or ""
     local displayedText = self:GetDisplayText()
-    local editorFont = self.CanvasGroup:GetAttribute("Font") or Enum.Font.RobotoMono
+    local editorFont = self.CanvasGroup:GetAttribute("Font") or Enum.Font.Code
     local editorTextSize = self.CanvasGroup:GetAttribute("TextSize") or 16
     local editorHighlightColor = self.CanvasGroup:GetAttribute("HighlightColor") or Color3.fromRGB(19, 35, 93)
     local editorTextColor = self.CanvasGroup:GetAttribute("TextColor3") or Color3.new(1, 1, 1)
@@ -3168,7 +3168,7 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
         local match = self.AutocompleteMatches[self.AutocompleteIndex]
         if match then
             self.AutocompleteHintText.Text = match.type
-            local bounds = Utils.getTextSize(match.type, 14, Enum.Font.RobotoMono, Vector2.new(1000, 24))
+            local bounds = Utils.getTextSize(match.type, 14, Enum.Font.Code, Vector2.new(1000, 24))
             self.AutocompleteHint.Size = UDim2.new(0, bounds.X + 16, 0, 24)
             local rowRelativeY = (self.AutocompleteIndex - 1) * 24 - self.AutocompleteScroll.CanvasPosition.Y
             self.AutocompleteHint.Position = UDim2.new(1, 1, 0, rowRelativeY)
@@ -3239,7 +3239,7 @@ function Baseline.HighlightFrame(parent, text, config)
     displayLabel.RichText = true
     displayLabel.TextXAlignment = Enum.TextXAlignment.Left
     displayLabel.TextYAlignment = Enum.TextYAlignment.Top
-    displayLabel.Font = config.Font or Enum.Font.RobotoMono
+    displayLabel.Font = config.Font or Enum.Font.Code
     displayLabel.TextSize = config.TextSize or 14
     displayLabel.Text = richText
     displayLabel.Parent = container
@@ -3250,7 +3250,7 @@ function Baseline.HighlightFrame(parent, text, config)
         copyBox.TextTransparency = 1
         copyBox.TextXAlignment = Enum.TextXAlignment.Left
         copyBox.TextYAlignment = Enum.TextYAlignment.Top
-        copyBox.Font = config.Font or Enum.Font.RobotoMono
+        copyBox.Font = config.Font or Enum.Font.Code
         copyBox.TextSize = config.TextSize or 14
         copyBox.Text = text
         copyBox.ClearTextOnFocus = false
@@ -3295,7 +3295,7 @@ function Baseline.newConsole(container, config)
         label.BackgroundTransparency = 1
         label.RichText = true
         label.TextXAlignment = Enum.TextXAlignment.Left
-        label.Font = config.Font or Enum.Font.RobotoMono
+        label.Font = config.Font or Enum.Font.Code
         label.TextSize = ts
         label.Text = rText
         label.Parent = logFrame
@@ -3305,7 +3305,7 @@ function Baseline.newConsole(container, config)
             copyBox.BackgroundTransparency = 1
             copyBox.TextTransparency = 1
             copyBox.TextXAlignment = Enum.TextXAlignment.Left
-            copyBox.Font = config.Font or Enum.Font.RobotoMono
+            copyBox.Font = config.Font or Enum.Font.Code
             copyBox.TextSize = ts
             copyBox.Text = text
             copyBox.ClearTextOnFocus = false
