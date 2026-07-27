@@ -35,7 +35,7 @@ local GlobalSettings = {
 	Font = Enum.Font.Code,  
 	TextColor3 = Color3.new(1, 1, 1), 
 	BlinkerColor = Color3.new(1, 1, 1), 
-	HighlightColor = Color3.fromRGB(19, 35, 93), 
+	HighlightColor = Color3.fromRGB(37, 100, 200), 
 	PlaceholderText = 'Print("Paper Client :D")', 
 	PlaceholderColor3 = Color3.fromRGB(150, 150, 150), 
 	PasswordMode = false,         
@@ -650,7 +650,7 @@ function Baseline.new(canvasGroup)
 	
 	self.Blinker = Instance.new("Frame")
 	self.Blinker.Name = "BaselineBlinker"
-	self.Blinker.Size = UDim2.new(0, 2, 0, 14)
+	self.Blinker.Size = UDim2.new(0, 1, 0, 14)
 	self.Blinker.BackgroundColor3 = Color3.new(1, 1, 1)
 	self.Blinker.BorderSizePixel = 0
 	self.Blinker.Visible = false
@@ -898,7 +898,7 @@ function Baseline.new(canvasGroup)
 			local relativeX = (pos.X - self.InnerFrame.AbsolutePosition.X) - 4
 			local relativeY = (pos.Y - self.InnerFrame.AbsolutePosition.Y) - 4
 			self.CursorIndex = self:GetClosestCursorIndex(relativeX, relativeY)
-			self:UpdateBlinker(false)
+			self:UpdateBlinker(true)
 		end
 	end))
 	
@@ -1294,6 +1294,11 @@ function Baseline:OpenFindUI()
 	findUI.AnchorPoint = Vector2.new(1, 0)
 	findUI.Position = UDim2.new(1, -20, 0, 8)
 	findUI.ZIndex = 100
+	for _, desc in ipairs(findUI:GetDescendants()) do
+		if desc:IsA("GuiObject") then
+			desc.ZIndex = 101
+		end
+	end
 	findUI.Parent = self.CanvasGroup
 	
 	self.FindMatches = {}
@@ -2928,10 +2933,32 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
 				end
 				local rEnd = lineData.renderEndIdx or lineData.endIdx
 				local stringOnLine = (lineData.startIdx <= rEnd) and displayedText:sub(lineData.startIdx, rEnd) or ""
+				
+				local localGhost = ""
+				if self.AutocompleteVisible and self.IsFocused and #self.AutocompleteMatches > 0 then
+					local match = self.AutocompleteMatches[self.AutocompleteIndex]
+					if match then
+						local currentWord = Utils.getWordBeforeCursor(displayedText, self.CursorIndex)
+						local afterChar = displayedText:sub(self.CursorIndex + 1, self.CursorIndex + 1)
+						if currentWord ~= "" and match.word:lower():sub(1, #currentWord) == currentWord:lower() and #match.word > #currentWord and (afterChar == "" or afterChar:match("[%s%p]")) then
+							if self.CursorIndex >= (lineData.startIdx - 1) and self.CursorIndex <= lineData.endIdx then
+								localGhost = match.word:sub(#currentWord + 1)
+								local cursorInLine = self.CursorIndex - lineData.startIdx + 1
+								stringOnLine = stringOnLine:sub(1, cursorInLine) .. string.rep(" ", #localGhost) .. stringOnLine:sub(cursorInLine + 1)
+							end
+						end
+					end
+				end
+
 				textLabelObj.Font = editorFont
 				textLabelObj.TextSize = editorTextSize
 				textLabelObj.TextColor3 = editorTextColor
-				local richTextStr = self:ApplySyntaxCached(lineData, stringOnLine, syntaxStateStr)
+				local richTextStr
+				if localGhost ~= "" then
+					richTextStr = self:ApplySyntax(stringOnLine, syntaxStateStr)
+				else
+					richTextStr = self:ApplySyntaxCached(lineData, stringOnLine, syntaxStateStr)
+				end
 				if lineData.isFolded then
 					richTextStr = richTextStr .. ' <font color="#888888">...</font>'
 				end
@@ -3078,7 +3105,7 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
 					local selectionStartIdx = math.min(self.SelectionStart, self.CursorIndex)
 					local selectionEndIdx = math.max(self.SelectionStart, self.CursorIndex)
 					if selectionEndIdx >= (lineData.startIdx - 1) and selectionStartIdx <= lineData.endIdx then
-						renderHighlightSelection(selectionStartIdx, selectionEndIdx, editorHighlightColor, 0.7)
+						renderHighlightSelection(selectionStartIdx, selectionEndIdx, editorHighlightColor, 0.4)
 					end
 				end
 			end
@@ -3196,7 +3223,7 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
 		end
 	end
 	local targetBlinkerPosition = UDim2.new(0, 4 + currentCursorX, 0, 4 + currentCursorY)
-	local targetBlinkerSize = UDim2.new(0, 2, 0, currentCursorHeight)
+	local targetBlinkerSize = UDim2.new(0, 1, 0, currentCursorHeight)
 	if self.CanvasGroup:GetAttribute("SmoothBlinker") then
 		local tweenInfo = TweenInfo.new(0.08, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
 		TweenService:Create(self.Blinker, tweenInfo, {
