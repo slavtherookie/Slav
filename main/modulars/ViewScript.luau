@@ -30,20 +30,13 @@ function ScriptViewer.Init()
 		btn.Name = name
 		btn.LayoutOrder = order
 		btn.Size = UDim2.new(0.25, 0, 1, 0)
-		btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-		btn.BorderSizePixel = 1
-		btn.BorderColor3 = Color3.fromRGB(30, 30, 30)
+		btn.BackgroundTransparency = 1
+		btn.BorderSizePixel = 0
 		btn.TextColor3 = Color3.fromRGB(220, 220, 220)
 		btn.Text = text
 		btn.Font = Enum.Font.SourceSans
 		btn.TextSize = 14
 		btn.AutoButtonColor = false
-
-		btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(55, 55, 55) end)
-		btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45) end)
-		btn.MouseButton1Down:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35) end)
-		btn.MouseButton1Up:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(55, 55, 55) end)
-
 		btn.Parent = actionBar
 		return btn
 	end
@@ -61,6 +54,8 @@ function ScriptViewer.Init()
 	editorContainer.Parent = contentPane
 
 	editor = LuaUEngine.new(editorContainer)
+	editor.ScrollBarTrackTransparency = 1
+	editor.ScrollBarStrokeTransparency = 1
 	editor:ImportTheme("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/Public/Themes/PaperDark.luau")
 
 	btnCopy.MouseButton1Click:Connect(function()
