@@ -320,8 +320,8 @@ local function resizeHook(self, resizer, dir)
 				local startInputY = input.Position.Y
 				local startSizeX = self.SizeX
 				local startSizeY = self.SizeY
-				local startPosX = guiMain.AbsolutePosition.X
-				local startPosY = guiMain.AbsolutePosition.Y
+				local startPosX = guiMain.Position.X.Offset
+				local startPosY = guiMain.Position.Y.Offset
 
 				releaseEvent = UserInputService.InputEnded:Connect(function(inp)
 					if inp.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -609,7 +609,7 @@ local windowMt = {__index = funcs}
 local function createGui(self)
 	local theme = sspdockcontainer.Theme
 	local gui = create({
-		{1, "ScreenGui", {Name="Window", IgnoreGuiInset=false}},
+		{1, "ScreenGui", {Name="Window"}},
 		{2, "Frame", {Active=true, BackgroundTransparency=1, BorderSizePixel=0, Name="Main", Parent={1}, Position=UDim2.new(0, 250, 0, 150), Size=UDim2.new(0, 300, 0, 300), ClipsDescendants=false}},
 		{3, "Frame", {BackgroundColor3=theme.Background, BorderSizePixel=0, Name="Content", Parent={2}, Position=UDim2.new(0, 0, 0, 20), Size=UDim2.new(1, 0, 1, -20), ClipsDescendants=true}},
 		{4, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={3}, Size=UDim2.new(1, 0, 0, 1)}},
@@ -655,8 +655,8 @@ local function createGui(self)
 			local releaseEvent, mouseEvent
 			local startInputX = input.Position.X
 			local startInputY = input.Position.Y
-			local initX = guiMain.AbsolutePosition.X
-			local initY = guiMain.AbsolutePosition.Y
+			local initX = guiMain.Position.X.Offset
+			local initY = guiMain.Position.Y.Offset
 			local alignInsertPos, alignInsertSide
 			
 			if not self.Aligned then
@@ -763,10 +763,9 @@ local function createGui(self)
 		end
 	end)
 
-	guiMain:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
-		local absPos = guiMain.AbsolutePosition
-		self.PosX = absPos.X
-		self.PosY = absPos.Y
+	guiMain:GetPropertyChangedSignal("Position"):Connect(function()
+		self.PosX = guiMain.Position.X.Offset
+		self.PosY = guiMain.Position.Y.Offset
 	end)
 
 	resizeHook(self, guiResizeControls.North, "N")
@@ -1097,7 +1096,6 @@ function sspdockcontainer.Init()
 
 	sidesGui = Instance.new("ScreenGui")
 	sidesGui.Name = "sspdockcontainer_Sides"
-	sidesGui.IgnoreGuiInset = false
 	
 	local theme = sspdockcontainer.Theme
 
@@ -1133,7 +1131,6 @@ function sspdockcontainer.Init()
 	alignIndicator = Instance.new("ScreenGui")
 	alignIndicator.Name = "sspdockcontainer_Indicator"
 	alignIndicator.DisplayOrder = 101000
-	alignIndicator.IgnoreGuiInset = false
 	
 	local indicator = Instance.new("Frame", alignIndicator)
 	indicator.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
