@@ -58,7 +58,7 @@ function ScriptViewer.Init()
 	editor.ScrollBarStrokeTransparency = 1
     
     editor.Font = Enum.Font.Code
-	editor.StrokeThickness = 2
+	editor.StrokeThickness = 1.35
 	editor.StrokeColor3 = Color3.fromRGB(0, 0, 0)
 	editor.StrokeTransparency = 0.75 -- 0.75 makes it 75% transparent (not very visible)
     
