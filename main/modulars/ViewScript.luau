@@ -56,6 +56,12 @@ function ScriptViewer.Init()
 	editor = LuaUEngine.new(editorContainer)
 	editor.ScrollBarTrackTransparency = 1
 	editor.ScrollBarStrokeTransparency = 1
+    
+	-- [ NEW ]: Subtle black stroke on the text
+	editor.StrokeThickness = 1
+	editor.StrokeColor3 = Color3.fromRGB(0, 0, 0)
+	editor.StrokeTransparency = 0.75 -- 0.75 makes it 75% transparent (not very visible)
+    
 	editor:ImportTheme("https://raw.githubusercontent.com/slavtherookie/Slav/refs/heads/main/Public/Themes/PaperDark.luau")
 
 	btnCopy.MouseButton1Click:Connect(function()
