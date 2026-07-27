@@ -39,7 +39,7 @@ local menuSecondaryTextColor = Color3.fromRGB(150, 150, 150)
 local menuSelectedTextColor = Color3.fromRGB(255, 255, 255)
 local menuItemBackgroundColor = Color3.fromRGB(35, 35, 35)
 local selectedMenuItemBackgroundColor = Color3.fromRGB(0, 90, 156)
-local scriptEditorScrollbarBackgroundColor = Color3.fromRGB(30, 30, 30)
+local scriptEditorScrollbarBackgroundColor = Color3.fromRGB(52, 52, 52)
 local scriptEditorScrollbarHandleColor = Color3.fromRGB(60, 60, 60)
 local indentationRulerColor = Color3.fromRGB(45, 45, 45)
 
