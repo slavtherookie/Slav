@@ -320,8 +320,8 @@ local function resizeHook(self, resizer, dir)
 				local startInputY = input.Position.Y
 				local startSizeX = self.SizeX
 				local startSizeY = self.SizeY
-				local startPosX = guiMain.Position.X.Offset
-				local startPosY = guiMain.Position.Y.Offset
+				local startPosX = guiMain.AbsolutePosition.X
+				local startPosY = guiMain.AbsolutePosition.Y
 
 				releaseEvent = UserInputService.InputEnded:Connect(function(inp)
 					if inp.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -609,8 +609,8 @@ local windowMt = {__index = funcs}
 local function createGui(self)
 	local theme = sspdockcontainer.Theme
 	local gui = create({
-		{1, "ScreenGui", {Name="Window"}},
-		{2, "Frame", {Active=true, BackgroundTransparency=1, BorderSizePixel=0, Name="Main", Parent={1}, Position=UDim2.new(0.4, 0, 0.4, 0), Size=UDim2.new(0, 300, 0, 300), ClipsDescendants=false}},
+		{1, "ScreenGui", {Name="Window", IgnoreGuiInset=true}},
+		{2, "Frame", {Active=true, BackgroundTransparency=1, BorderSizePixel=0, Name="Main", Parent={1}, Position=UDim2.new(0, 250, 0, 150), Size=UDim2.new(0, 300, 0, 300), ClipsDescendants=false}},
 		{3, "Frame", {BackgroundColor3=theme.Background, BorderSizePixel=0, Name="Content", Parent={2}, Position=UDim2.new(0, 0, 0, 20), Size=UDim2.new(1, 0, 1, -20), ClipsDescendants=true}},
 		{4, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={3}, Size=UDim2.new(1, 0, 0, 1)}},
 		{5, "Frame", {BackgroundColor3=theme.TopBar, BorderSizePixel=0, Name="TopBar", Parent={2}, Size=UDim2.new(1, 0, 0, 20)}},
@@ -655,8 +655,8 @@ local function createGui(self)
 			local releaseEvent, mouseEvent
 			local startInputX = input.Position.X
 			local startInputY = input.Position.Y
-			local initX = guiMain.Position.X.Offset
-			local initY = guiMain.Position.Y.Offset
+			local initX = guiMain.AbsolutePosition.X
+			local initY = guiMain.AbsolutePosition.Y
 			local alignInsertPos, alignInsertSide
 			
 			if not self.Aligned then
@@ -1097,6 +1097,7 @@ function sspdockcontainer.Init()
 
 	sidesGui = Instance.new("ScreenGui")
 	sidesGui.Name = "sspdockcontainer_Sides"
+	sidesGui.IgnoreGuiInset = true
 	
 	local theme = sspdockcontainer.Theme
 
@@ -1132,6 +1133,7 @@ function sspdockcontainer.Init()
 	alignIndicator = Instance.new("ScreenGui")
 	alignIndicator.Name = "sspdockcontainer_Indicator"
 	alignIndicator.DisplayOrder = 101000
+	alignIndicator.IgnoreGuiInset = true
 	
 	local indicator = Instance.new("Frame", alignIndicator)
 	indicator.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
