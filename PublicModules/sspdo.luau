@@ -609,7 +609,7 @@ local windowMt = {__index = funcs}
 local function createGui(self)
 	local theme = sspdockcontainer.Theme
 	local gui = create({
-		{1, "ScreenGui", {Name="Window", IgnoreGuiInset=true}},
+		{1, "ScreenGui", {Name="Window", IgnoreGuiInset=false}},
 		{2, "Frame", {Active=true, BackgroundTransparency=1, BorderSizePixel=0, Name="Main", Parent={1}, Position=UDim2.new(0, 250, 0, 150), Size=UDim2.new(0, 300, 0, 300), ClipsDescendants=false}},
 		{3, "Frame", {BackgroundColor3=theme.Background, BorderSizePixel=0, Name="Content", Parent={2}, Position=UDim2.new(0, 0, 0, 20), Size=UDim2.new(1, 0, 1, -20), ClipsDescendants=true}},
 		{4, "Frame", {BackgroundColor3=theme.Outline, BorderSizePixel=0, Name="Line", Parent={3}, Size=UDim2.new(1, 0, 0, 1)}},
@@ -1097,7 +1097,7 @@ function sspdockcontainer.Init()
 
 	sidesGui = Instance.new("ScreenGui")
 	sidesGui.Name = "sspdockcontainer_Sides"
-	sidesGui.IgnoreGuiInset = true
+	sidesGui.IgnoreGuiInset = false
 	
 	local theme = sspdockcontainer.Theme
 
@@ -1133,7 +1133,7 @@ function sspdockcontainer.Init()
 	alignIndicator = Instance.new("ScreenGui")
 	alignIndicator.Name = "sspdockcontainer_Indicator"
 	alignIndicator.DisplayOrder = 101000
-	alignIndicator.IgnoreGuiInset = true
+	alignIndicator.IgnoreGuiInset = false
 	
 	local indicator = Instance.new("Frame", alignIndicator)
 	indicator.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
