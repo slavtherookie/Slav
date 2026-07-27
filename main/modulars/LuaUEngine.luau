@@ -798,7 +798,7 @@ function Baseline.new(canvasGroup)
                     self.CursorIndex = closestIndex
                 end
                 self.IsDragging = true
-                self:UpdateBlinker(true)
+                self:UpdateBlinker(false)
             else
                 self:Unfocus()
             end
